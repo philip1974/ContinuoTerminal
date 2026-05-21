@@ -1,0 +1,39 @@
+{
+  "name": "@continuo-terminal/react-terminal",
+  "private": true,
+  "version": "0.0.0",
+  "description": "React 19 + xterm 6 component wired to @continuo-terminal/server-node via MCPClientAdapter interface.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "sideEffects": false,
+  "scripts": {
+    "test": "vitest run __tests__/"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@continuo-terminal/protocol": "workspace:*",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "jsdom": "^29.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  }
+}

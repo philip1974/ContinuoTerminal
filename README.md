@@ -63,6 +63,15 @@ This project is the planned extraction of the terminal-MCP engine from
 [philip1974/Continuo](https://github.com/philip1974/Continuo). It will be
 released as a separate package once the API surface is frozen.
 
+## Contributing
+
+Issues and pull requests are welcome. See
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) for the local dev setup, commit
+conventions, and review path, and
+[`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) for the Contributor
+Covenant we follow. Bug reports and feature requests use the templates
+under [`.github/ISSUE_TEMPLATE/`](./.github/ISSUE_TEMPLATE).
+
 ## License
 
 MIT — see [`LICENSE`](./LICENSE).

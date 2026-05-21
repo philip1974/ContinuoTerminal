@@ -1,0 +1,29 @@
+{
+  "name": "@continuo-terminal/example-minimal-react-host",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Vite + React 19 host demoing @continuo-terminal/react-terminal with an in-memory mock MCPClientAdapter.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p ."
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@continuo-terminal/react-terminal": "workspace:*",
+    "@xterm/xterm": "^6.0.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.2",
+    "typescript": "^5.7.2",
+    "vite": "^8.0.14"
+  }
+}

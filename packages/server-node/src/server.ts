@@ -31,14 +31,19 @@ import { makeSendInputHandler } from './handlers/send-input.js';
 import { makeSendTextHandler } from './handlers/send-text.js';
 import { SessionManager } from './session-manager.js';
 
+// Tool descriptions are surfaced verbatim in tools/list and form the
+// contract LLM/MCP hosts see. They MUST match the actual schema and
+// implementation — round-3/4/5/6 audits each caught new drift between
+// these strings and reality. Verify before changing the schema or
+// SessionManager that the matching line here is updated.
 const TOOL_DESCRIPTIONS = {
-  [MCP_TOOL_CREATE_SESSION]: 'Start a new pseudo-terminal session with optional cwd, env, cols, rows.',
+  [MCP_TOOL_CREATE_SESSION]: 'Start a new pseudo-terminal session with optional cwd, shell, cols, rows, autorun, agentLabel, and attach target hint.',
   [MCP_TOOL_LIST_SESSIONS]: 'List all active terminal sessions in this server.',
-  [MCP_TOOL_SEND_INPUT]: "Write raw string data to a session's PTY stdin (no encoding applied; pass the bytes you want the PTY to read).",
+  [MCP_TOOL_SEND_INPUT]: "Write a UTF-8 text string to a session's PTY stdin (no encoding transform; bytes that are not valid UTF-8 cannot be transported via this tool — use terminal.press_key for special keys).",
   [MCP_TOOL_SEND_TEXT]: "Write text to a session's PTY stdin verbatim (no newline normalization; pair with terminal.press_key for Enter).",
   [MCP_TOOL_PRESS_KEY]: 'Press a special key (enter/tab/ctrl_c/arrows/...) in a session.',
   [MCP_TOOL_READ_OUTPUT]: 'Read accumulated output from a session, with optional since_seq cursor and ANSI strip.',
-  [MCP_TOOL_KILL]: 'Terminate a session (graceful SIGTERM then SIGKILL fallback).',
+  [MCP_TOOL_KILL]: 'Terminate a session by sending the requested signal (SIGINT / SIGTERM / SIGKILL; defaults to SIGTERM). No automatic escalation — the caller is responsible for retrying with a stronger signal if the process does not exit.',
 } as const;
 
 export function createTerminalMcpServer({ sessions = new SessionManager() } = {}) {
@@ -136,20 +141,39 @@ export async function main(): Promise<void> {
   // the SDK transport, dropping any responses still flushing on stdout.
   // Round-5 audit P1: route everything through shutdownAll() and await
   // server.close() before exiting.
+  // Bounded timeout for each step of shutdown. Without this, a stuck PTY
+  // (e.g. a shell ignoring SIGTERM) or a hung SDK close would block the
+  // Node process forever on a host-disconnect. 5s is long enough for
+  // real cleanup; if it elapses we exit anyway so the user is never stuck.
+  const SHUTDOWN_STEP_TIMEOUT_MS = 5000;
+  const withTimeout = async <T>(p: Promise<T>, label: string): Promise<void> => {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        p,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`shutdown timeout: ${label}`)), SHUTDOWN_STEP_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
   let shuttingDown = false;
   const shutdownAll = async (exitCode: number): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
     try {
-      await sessions.dispose();
+      await withTimeout(sessions.dispose(), 'sessions.dispose');
     } catch {
-      // best-effort: a dispose failure must not block transport close
+      // best-effort: dispose failure must not block transport close
     }
     try {
       // Server.close() flushes in-flight responses and calls
       // transport.close() under the hood; we do not call transport.close()
       // ourselves to avoid double-close.
-      await server.close();
+      await withTimeout(server.close(), 'server.close');
     } catch {
       // best-effort: if onclose already fired the transport may be closed
     }
@@ -160,8 +184,15 @@ export async function main(): Promise<void> {
     // Stdin EOF / host detached → graceful shutdown with 0 exit code.
     void shutdownAll(0);
   };
+  // Round-6 P2: cover the common termination signals, not just SIGINT/
+  // SIGTERM. SIGHUP fires when the controlling terminal disappears (ssh
+  // disconnect, parent shell exit); SIGQUIT during process supervision.
+  // Without these, PTY children are orphaned on the most common detach
+  // scenarios.
   process.once('SIGINT', () => void shutdownAll(130));
   process.once('SIGTERM', () => void shutdownAll(0));
+  process.once('SIGHUP', () => void shutdownAll(0));
+  process.once('SIGQUIT', () => void shutdownAll(0));
 
   await server.connect(transport);
 }

@@ -137,8 +137,13 @@ export function register(program: Command): void {
             }
             return;
           }
-          // Other raw bytes → send_input. PTY treats data as a string per
-          // the protocol schema; we pass through the chunk's UTF-8 view.
+          // Other raw bytes → send_input. The send_input schema's `data`
+          // field is a string, so we have to decode the Buffer to a string
+          // before sending. UTF-8 is the only safe interpretation for
+          // terminal input in v0.1.0; bytes that are not valid UTF-8 are
+          // replaced with U+FFFD here — a Phase 2 concern (round-6 P2).
+          // Special keys (Ctrl+C, arrows, etc.) go through press_key
+          // instead, which the protocol carries as KEY_BYTES not text.
           try {
             await client.callTool({
               name: 'terminal.send_input',

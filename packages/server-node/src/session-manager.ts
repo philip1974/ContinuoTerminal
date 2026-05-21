@@ -63,16 +63,27 @@ export class SessionBuffer {
     }
   }
 
-  // A consumer is truncated when its cursor is strictly less than the highest
-  // dropped seq — i.e. there is at least one seq in (sinceSeq, droppedThroughSeq]
-  // that the buffer no longer holds. Once the consumer catches up past the
-  // dropped range, subsequent reads stop reporting truncated.
+  // Cursor contract (round-6 P1 fix):
+  //   next_seq returned by readSince is "the seq the consumer should send on
+  //   the NEXT call" — i.e. one past every seq currently in the buffer. The
+  //   filter is `>=` so a consumer that stores next_seq and feeds it back in
+  //   does not skip a boundary chunk.
+  //
+  //   Pre-fix used `>` filter, which combined with push() incrementing
+  //   nextSeq AFTER assigning seq caused an off-by-one: an idle consumer that
+  //   read once and stored next_seq=N would then filter `seq > N` and drop
+  //   the very next chunk (whose seq == N) every polling cycle.
+  //
+  //   Truncation: a consumer asking for since_seq=K is truncated iff there
+  //   exists a dropped seq >= K, i.e. K <= droppedThroughSeq AND at least
+  //   one chunk has been dropped (droppedThroughSeq starts at 0 as the
+  //   "nothing dropped" sentinel; real seqs start at 1).
   readSince(sinceSeq = 0): { chunks: BufferChunk[]; nextSeq: number; truncated: boolean } {
-    const chunks = this.chunks.filter((chunk) => chunk.seq > sinceSeq);
+    const chunks = this.chunks.filter((chunk) => chunk.seq >= sinceSeq);
     return {
       chunks,
       nextSeq: this.nextSeq,
-      truncated: sinceSeq < this.droppedThroughSeq,
+      truncated: this.droppedThroughSeq > 0 && sinceSeq <= this.droppedThroughSeq,
     };
   }
 }

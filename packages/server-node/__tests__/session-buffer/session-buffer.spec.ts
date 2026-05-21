@@ -39,14 +39,14 @@ describe('SessionBuffer (round-3 P2 #5: truncated is not sticky)', () => {
     }
 
     // The first chunk still present has seq=2 (since seq=1 was dropped).
-    // A caught-up consumer reads since_seq=2, which means "anything strictly
-    // after seq=2". The oldest remaining is seq=3 — no gap. Before the fix,
-    // the sticky `dropped` flag would have made this read truncated=true
-    // forever even though the consumer has no missing data.
+    // A caught-up consumer reads since_seq=2, which now means "everything
+    // with seq >= 2" under the round-6 inclusive-cursor contract — so the
+    // first returned chunk is the one with seq=2 itself. No gap missing
+    // from the consumer's perspective, so truncated=false.
     const out = buf.readSince(2);
 
     expect(out.truncated).toBe(false);
-    expect(out.chunks[0]?.seq).toBe(3);
+    expect(out.chunks[0]?.seq).toBe(2);
   });
 
   it('reports truncated=false on an empty incremental read after a past drop', () => {
@@ -63,6 +63,31 @@ describe('SessionBuffer (round-3 P2 #5: truncated is not sticky)', () => {
 
     expect(out.chunks).toEqual([]);
     expect(out.truncated).toBe(false);
+  });
+
+  // Round-6 P1 regression: idle polling must not drop a boundary chunk. With
+  // the pre-fix `>` filter combined with push() incrementing nextSeq AFTER
+  // assigning seq, a consumer that read once at idle (storing next_seq=N)
+  // and then read again would filter `seq > N` and skip the very next
+  // pushed chunk (whose seq == N). The new `>=` filter + cursor contract
+  // delivers it on the next read.
+  it('does not skip the boundary chunk when client uses next_seq as the next cursor', () => {
+    const buf = new SessionBuffer();
+    // Idle read — nothing buffered yet.
+    const first = buf.readSince(0);
+    expect(first.chunks).toEqual([]);
+    expect(first.nextSeq).toBe(1); // points at the next-to-be-assigned seq
+
+    // PTY pushes one chunk AFTER the idle read.
+    buf.push('boundary');
+
+    // Client reads with the cursor it stored from `first`. Must include
+    // the new chunk; pre-fix this returned empty due to `seq > 1` filter.
+    const out = buf.readSince(first.nextSeq);
+    expect(out.chunks).toHaveLength(1);
+    expect(out.chunks[0]?.data).toBe('boundary');
+    expect(out.chunks[0]?.seq).toBe(1);
+    expect(out.nextSeq).toBe(2);
   });
 
   // Round-4 P2 regression: a single push larger than the 4 MiB cap drops

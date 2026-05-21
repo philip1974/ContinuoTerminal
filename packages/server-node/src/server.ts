@@ -120,8 +120,32 @@ export function createTerminalMcpServer({ sessions = new SessionManager() } = {}
 }
 
 export async function main(): Promise<void> {
-  const { server } = createTerminalMcpServer();
+  const { server, sessions } = createTerminalMcpServer();
   const transport = new StdioServerTransport();
+
+  // Wire shutdown signals to SessionManager.dispose so PTY children get
+  // SIGTERM before the Node process exits. Without this, a host that
+  // terminates the stdio server (e.g. by SIGTERM) leaves the cleanup to
+  // OS process-death semantics; long-lived shell children can outlive the
+  // parent in some configurations. process.once is used (not on) so a
+  // double signal does not loop, and the handler is best-effort: any
+  // error during dispose is swallowed so we still exit promptly.
+  let shuttingDown = false;
+  const shutdown = (signal: NodeJS.Signals): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    void sessions
+      .dispose()
+      .catch(() => {
+        // Best effort — we are about to exit anyway.
+      })
+      .finally(() => {
+        process.exit(signal === 'SIGINT' ? 130 : 0);
+      });
+  };
+  process.once('SIGINT', shutdown);
+  process.once('SIGTERM', shutdown);
+
   await server.connect(transport);
 }
 

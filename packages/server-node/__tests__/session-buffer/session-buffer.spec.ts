@@ -64,4 +64,26 @@ describe('SessionBuffer (round-3 P2 #5: truncated is not sticky)', () => {
     expect(out.chunks).toEqual([]);
     expect(out.truncated).toBe(false);
   });
+
+  // Round-4 P2 regression: a single push larger than the 4 MiB cap drops
+  // every retained chunk (because the while loop removes them all looking
+  // for headroom that never appears). The round-3 implementation computed
+  // truncated from chunks[0]?.seq ?? nextSeq and silently reported false
+  // because there were no chunks left — consumers got empty lines but no
+  // signal that the oversized output was lost. droppedThroughSeq fixes it.
+  it('reports truncated=true when a single oversized push evicts every chunk', () => {
+    const buf = new SessionBuffer();
+    // ~5 MiB in one chunk: the while loop will shift this very chunk out
+    // because totalBytes > MAX_BUFFER_BYTES even after the shift attempt.
+    const FIVE_MB = 'y'.repeat(5 * 1024 * 1024);
+
+    buf.push(FIVE_MB);
+
+    // Consumer reading from the start MUST see truncated=true even though
+    // the buffer is now empty.
+    const out = buf.readSince(0);
+    expect(out.chunks).toEqual([]);
+    expect(out.truncated).toBe(true);
+    expect(out.nextSeq).toBe(2); // nextSeq is incremented before drop
+  });
 });

@@ -95,8 +95,14 @@ export function register(program: Command): void {
             // to read. Detach immediately so the user is not stuck — Ctrl+D
             // in raw mode goes to the PTY, not to stdin EOF, and Ctrl+C is
             // intentionally forwarded to the PTY too.
+            //
+            // The regex is anchored to "Session not found:" (the exact prefix
+            // SessionManager.getSession throws). Round-3 used a looser
+            // /session_id/i fallback that round-4 caught: it would have
+            // swallowed Zod validation errors mentioning the session_id field
+            // and reported them as normal session termination.
             const msg = err instanceof Error ? err.message : String(err);
-            if (/Session not found/i.test(msg) || /session_id/i.test(msg)) {
+            if (/^Session not found:/i.test(msg)) {
               detachReason = 'session-ended';
               resolveDetach();
             }

@@ -49,3 +49,10 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Build minimal-react-host
+        # Vite bundling catches CSS / package.exports / dependency-resolution
+        # failures that typecheck + vitest do not. Round-4 audit P1: this is
+        # the host's primary real-verification and was previously only run
+        # locally — meaning CI could go green while production builds broke.
+        run: pnpm --filter @continuo-terminal/example-minimal-react-host build

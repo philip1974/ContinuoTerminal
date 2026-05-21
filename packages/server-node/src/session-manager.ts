@@ -38,6 +38,14 @@ export class SessionBuffer {
   private chunks: BufferChunk[] = [];
   private totalBytes = 0;
   private nextSeq = 1;
+  // Highest seq known to have been dropped from this buffer (0 = nothing
+  // dropped). Tracked separately from retained chunks so a single oversized
+  // push that drops every chunk still reports truncated to consumers whose
+  // cursor falls inside the dropped range. The round-3 fix removed the
+  // sticky `dropped` boolean but used `chunks[0]?.seq ?? nextSeq` to compute
+  // truncated, which silently lost the gap whenever the chunk array was
+  // emptied entirely — round-4 P2 finding.
+  private droppedThroughSeq = 0;
 
   push(data: string): void {
     const bytes = Buffer.byteLength(data, 'utf8');
@@ -51,21 +59,20 @@ export class SessionBuffer {
         break;
       }
       this.totalBytes -= removed.bytes;
+      this.droppedThroughSeq = removed.seq;
     }
   }
 
-  // truncated is computed per-read from oldest retained seq vs requested cursor:
-  // if the buffer no longer contains seq=since_seq+1 (because it was dropped),
-  // the consumer has a gap and the read is truncated. Once they catch up to
-  // the new oldest, subsequent reads are no longer truncated. There is no
-  // sticky drop flag — a single drop in the past must not poison every
-  // future read on this session.
+  // A consumer is truncated when its cursor is strictly less than the highest
+  // dropped seq — i.e. there is at least one seq in (sinceSeq, droppedThroughSeq]
+  // that the buffer no longer holds. Once the consumer catches up past the
+  // dropped range, subsequent reads stop reporting truncated.
   readSince(sinceSeq = 0): { chunks: BufferChunk[]; nextSeq: number; truncated: boolean } {
     const chunks = this.chunks.filter((chunk) => chunk.seq > sinceSeq);
     return {
       chunks,
       nextSeq: this.nextSeq,
-      truncated: (this.chunks[0]?.seq ?? this.nextSeq) > sinceSeq + 1,
+      truncated: sinceSeq < this.droppedThroughSeq,
     };
   }
 }
@@ -205,10 +212,14 @@ export class SessionManager {
     return {};
   }
 
-  dispose(): void {
-    for (const id of [...this.sessions.keys()]) {
-      void this.kill({ session_id: id, signal: 'SIGTERM' });
-    }
+  async dispose(): Promise<void> {
+    // Awaiting all kills ensures every PTY has had SIGTERM sent (and the
+    // removeSession bookkeeping completed) before this returns. The main()
+    // shutdown handler uses this to give live shells a chance to exit
+    // cleanly before the Node process itself exits. Idempotent: a second
+    // call sees an empty sessions Map and returns immediately.
+    const ids = [...this.sessions.keys()];
+    await Promise.all(ids.map((id) => this.kill({ session_id: id, signal: 'SIGTERM' })));
   }
 
   private getSession(sessionId: string): SessionState {

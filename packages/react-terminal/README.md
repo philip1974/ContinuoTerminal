@@ -55,7 +55,7 @@ interface MCPClientAdapter {
 ## Phase 1 trade-offs
 
 - User input is sent via `terminal.send_text` (UTF-8 text). Raw binary input via `terminal.send_input` is Phase 2.
-- Real xterm rendering not unit-tested (jsdom has no canvas); unit tests mock `@xterm/xterm`. End-to-end GUI verification lives in `examples/minimal-react-host` (future topic).
+- Real xterm rendering not unit-tested (jsdom has no canvas); unit tests mock `@xterm/xterm`. `examples/minimal-react-host` provides a buildable Vite + React 19 host wired against an **in-memory mock** `MCPClientAdapter` — useful for manual visual checks and as a regression target for the Vite build, but NOT a real browser-render E2E. True browser E2E (real xterm canvas + screenshot or a11y-tree comparison against a live PTY) remains future work.
 
 ## Tests
 

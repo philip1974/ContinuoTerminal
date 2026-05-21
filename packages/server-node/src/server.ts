@@ -123,28 +123,45 @@ export async function main(): Promise<void> {
   const { server, sessions } = createTerminalMcpServer();
   const transport = new StdioServerTransport();
 
-  // Wire shutdown signals to SessionManager.dispose so PTY children get
-  // SIGTERM before the Node process exits. Without this, a host that
-  // terminates the stdio server (e.g. by SIGTERM) leaves the cleanup to
-  // OS process-death semantics; long-lived shell children can outlive the
-  // parent in some configurations. process.once is used (not on) so a
-  // double signal does not loop, and the handler is best-effort: any
-  // error during dispose is swallowed so we still exit promptly.
+  // Three shutdown paths exist for an MCP stdio server, and all three must
+  // converge on the same cleanup sequence (dispose PTYs → close protocol →
+  // close transport → exit) so live shell children are not orphaned and
+  // in-flight stdio responses are not lost:
+  //
+  //   1. Host closes stdin             → transport.onclose fires
+  //   2. POSIX signal (SIGINT/SIGTERM) → process signal handler
+  //   3. main() exits naturally        → never happens here (long-lived)
+  //
+  // Round-4 wired only (2) and called process.exit directly without closing
+  // the SDK transport, dropping any responses still flushing on stdout.
+  // Round-5 audit P1: route everything through shutdownAll() and await
+  // server.close() before exiting.
   let shuttingDown = false;
-  const shutdown = (signal: NodeJS.Signals): void => {
+  const shutdownAll = async (exitCode: number): Promise<void> => {
     if (shuttingDown) return;
     shuttingDown = true;
-    void sessions
-      .dispose()
-      .catch(() => {
-        // Best effort — we are about to exit anyway.
-      })
-      .finally(() => {
-        process.exit(signal === 'SIGINT' ? 130 : 0);
-      });
+    try {
+      await sessions.dispose();
+    } catch {
+      // best-effort: a dispose failure must not block transport close
+    }
+    try {
+      // Server.close() flushes in-flight responses and calls
+      // transport.close() under the hood; we do not call transport.close()
+      // ourselves to avoid double-close.
+      await server.close();
+    } catch {
+      // best-effort: if onclose already fired the transport may be closed
+    }
+    process.exit(exitCode);
   };
-  process.once('SIGINT', shutdown);
-  process.once('SIGTERM', shutdown);
+
+  transport.onclose = (): void => {
+    // Stdin EOF / host detached → graceful shutdown with 0 exit code.
+    void shutdownAll(0);
+  };
+  process.once('SIGINT', () => void shutdownAll(130));
+  process.once('SIGTERM', () => void shutdownAll(0));
 
   await server.connect(transport);
 }

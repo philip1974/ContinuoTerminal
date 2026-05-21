@@ -19,6 +19,17 @@ export function makeReadOutputHandler({ sessions }: { sessions: SessionManager }
         structuredContent: output,
       };
     } catch (err) {
+      // When the underlying error carries a stable machine code (e.g. the
+      // SessionManager.getSession SESSION_NOT_FOUND), emit a structured
+      // JSON body so polling clients (notably standalone-cli `attach`)
+      // can detect "session is gone" without parsing English. Other
+      // errors keep the plain-text formatError shape so the existing
+      // generic-throw tests stay green. Round-5 audit P2 hardening.
+      const code = err instanceof Error ? (err as Error & { code?: string }).code : undefined;
+      if (code === 'SESSION_NOT_FOUND') {
+        const message = err instanceof Error ? err.message : String(err);
+        return { isError: true, content: [{ type: 'text', text: JSON.stringify({ error: code, message }) }] };
+      }
       return { isError: true, content: [{ type: 'text', text: formatError(err) }] };
     }
   };

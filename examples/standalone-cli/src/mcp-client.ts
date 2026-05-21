@@ -28,6 +28,11 @@ export function extractText(result: unknown): string {
  * If the server signaled `isError: true`, the text content is surfaced as an
  * Error so callers see the Zod / runtime message directly instead of trying
  * to JSON.parse a free-form error string (议题 D.5 cli error path).
+ *
+ * When the text body is a structured error envelope (`{"error":"CODE",...}`),
+ * the parsed `error` value is attached as `.code` on the thrown Error. This
+ * gives callers like attach.ts a stable detection path independent of the
+ * human-readable message (round-5 P2 hardening — see read-output handler).
  */
 export function readResult<O>(raw: unknown): O {
   const r = raw as {
@@ -36,7 +41,34 @@ export function readResult<O>(raw: unknown): O {
     content?: Array<{ type?: string; text?: string }>;
   };
   if (r.isError) {
-    throw new Error(extractText(raw) || 'callTool returned isError without a text body');
+    const text = extractText(raw) || 'callTool returned isError without a text body';
+    // Try to read a structured error envelope. We require BOTH the body to
+    // parse as JSON AND it to look like { error: <string>, ... } before
+    // attaching `.code`; arbitrary JSON in error text (e.g. zod messages
+    // that happen to start with `{`) must not be silently reshaped.
+    if (text.startsWith('{')) {
+      try {
+        const parsed = JSON.parse(text) as unknown;
+        if (
+          parsed !== null &&
+          typeof parsed === 'object' &&
+          'error' in parsed &&
+          typeof (parsed as { error: unknown }).error === 'string'
+        ) {
+          const envelope = parsed as { error: string; message?: unknown };
+          const message = typeof envelope.message === 'string' ? envelope.message : text;
+          const e = new Error(message) as Error & { code: string };
+          e.code = envelope.error;
+          throw e;
+        }
+      } catch (parseErr) {
+        if (parseErr instanceof Error && (parseErr as Error & { code?: string }).code) {
+          throw parseErr; // structured error we just built — propagate
+        }
+        // Otherwise fall through to plain-text Error below.
+      }
+    }
+    throw new Error(text);
   }
   if (r.structuredContent !== undefined) return r.structuredContent;
   const text = extractText(raw);

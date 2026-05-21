@@ -34,4 +34,24 @@ describe('terminal.read_output', () => {
     expect(result.isError).toBe(true);
     expect(result.content[0]?.type === 'text' ? result.content[0].text : '').toContain('read failed');
   });
+
+  // Round-5 P2: when the underlying error carries a SESSION_NOT_FOUND code,
+  // the handler emits a JSON-shaped envelope so polling clients (attach)
+  // can detect session-end without parsing English.
+  it('emits a structured JSON error envelope when manager throws with code SESSION_NOT_FOUND', async () => {
+    const err = new Error('Session not found: s-xyz') as Error & { code: string };
+    err.code = 'SESSION_NOT_FOUND';
+    const handler = makeReadOutputHandler({
+      sessions: { readOutput: vi.fn().mockRejectedValue(err) } as any,
+    });
+
+    const result = await handler({ session_id: 's-xyz' });
+
+    expect(result.isError).toBe(true);
+    const text = result.content[0]?.type === 'text' ? result.content[0].text : '';
+    expect(JSON.parse(text)).toEqual({
+      error: 'SESSION_NOT_FOUND',
+      message: 'Session not found: s-xyz',
+    });
+  });
 });

@@ -61,13 +61,24 @@ export function Terminal({
 
   useEffect(() => {
     if (typeof adapter.subscribeOutput === 'function') {
+      // Same `cancelled` guard as the polling branch (round-3 P1 #4): an
+      // adapter whose unsubscribe() is not synchronous, or that already has
+      // a queued callback in flight at the moment sessionId changes, would
+      // otherwise write stale lines into the new terminal and corrupt
+      // sinceSeqRef for the new session. Round-5 audit P1: the round-3
+      // fix only covered polling and missed this branch.
+      let cancelled = false;
       const unsubscribe = adapter.subscribeOutput(sessionId, (lines, nextSeq) => {
+        if (cancelled) {
+          return;
+        }
         if (lines.length > 0) {
           terminalRef.current?.write(lines.join('\r\n'));
         }
         sinceSeqRef.current = nextSeq;
       });
       return () => {
+        cancelled = true;
         unsubscribe();
       };
     }

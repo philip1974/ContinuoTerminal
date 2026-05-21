@@ -116,4 +116,50 @@ describe('react-terminal Terminal component', () => {
       expect(staleCalls).toEqual([]);
     }
   });
+
+  // Round-5 P1: the subscribeOutput branch also needs the effect-local
+  // cancelled guard. Round-3 added it to polling but missed this path, so
+  // an adapter whose unsubscribe() is async (or whose callback fires after
+  // sessionId changes) would have written stale lines into the new xterm.
+  it('discards subscribeOutput callbacks after sessionId changes mid-subscription', () => {
+    let storedCallback: ((lines: string[], nextSeq: number) => void) | null = null;
+    const adapter: MCPClientAdapter = {
+      callTool: vi.fn() as unknown as MCPClientAdapter['callTool'],
+      // subscribeOutput stores the callback in our closure; the returned
+      // unsubscribe is intentionally a no-op to simulate the race where a
+      // callback is already queued/inflight at the moment React tears the
+      // effect down.
+      subscribeOutput: vi.fn((_sessionId: string, cb: (lines: string[], nextSeq: number) => void) => {
+        storedCallback = cb;
+        return () => {
+          /* deliberate no-op for the race scenario */
+        };
+      }) as unknown as MCPClientAdapter['subscribeOutput'],
+    };
+
+    const { rerender } = render(<TerminalComponent sessionId="s1" adapter={adapter} pollIntervalMs={false} />);
+    // TS control-flow analysis still narrows storedCallback to `null` here
+    // because the closure-side assignment happens inside vi.fn — we know
+    // render() invoked the effect synchronously and the callback is now
+    // set, so a runtime check + invariant assertion is the cleanest path.
+    const callbackForS1 = storedCallback as ((lines: string[], nextSeq: number) => void) | null;
+    expect(callbackForS1).toBeTypeOf('function');
+
+    // Switch sessions — the polling-effect cleanup must flip cancelled=true
+    // for the closure captured in the s1 subscribeOutput callback.
+    rerender(<TerminalComponent sessionId="s2" adapter={adapter} pollIntervalMs={false} />);
+
+    // Fire the s1 callback after the rerender. Pre-fix, this wrote into
+    // the s2 xterm and overwrote sinceSeqRef. Post-fix, cancelled returns
+    // early.
+    callbackForS1?.(['STALE-FROM-S1-SUB'], 999);
+
+    const instances = (XTermMock as any).mock.results.map((r: { value: { write: ReturnType<typeof vi.fn> } }) => r.value);
+    for (const inst of instances) {
+      const staleCalls = inst.write.mock.calls.filter((args: unknown[]) =>
+        typeof args[0] === 'string' && args[0].includes('STALE-FROM-S1-SUB'),
+      );
+      expect(staleCalls).toEqual([]);
+    }
+  });
 });

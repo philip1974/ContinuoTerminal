@@ -6,9 +6,9 @@ as composable, host-agnostic packages.
 
 ## Layers
 
-The repository is organised into six active packages across five layers
-(plus stubs for future work). Each is independently testable and ships
-with its own `package.json` and `tsconfig.json`.
+The repository is organised into five active workspace packages across
+five layers (plus stubs for future work). Each is independently testable
+and ships with its own `package.json` and `tsconfig.json`.
 
 ```
 +----------------------------------------------------------------------+
@@ -59,8 +59,8 @@ future topics will populate them.
 
 ## Package dependency graph
 
-The six active packages depend in one direction (downstream layers depend on
-upstream layers, never the reverse):
+The five active workspace packages depend in one direction (downstream
+layers depend on upstream layers, never the reverse):
 
 ```
 @continuo-terminal/protocol  (Zod schemas)
@@ -91,7 +91,9 @@ upstream layers, never the reverse):
   (workspace:*) and demonstrates spawning `server-node` over stdio.
 - `example-minimal-react-host` depends on `react-terminal` (workspace:*)
   and ships a mock `MCPClientAdapter` so the React component can be
-  developed and screenshot-tested without a real PTY backend.
+  built and manually verified without a real PTY backend (the current
+  CI gate is a Vite production build; real browser-render E2E remains
+  future work).
 
 ## Runtime flow (standalone CLI demo)
 

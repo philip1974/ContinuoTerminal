@@ -4,7 +4,7 @@ The terminal MCP engine extracted from
 [philip1974/Continuo](https://github.com/philip1974/Continuo), packaged as a
 pnpm monorepo of host-agnostic libraries plus an example CLI.
 
-The repo ships six active packages on top of a Zod-defined protocol layer:
+The repo ships five active workspace packages on top of a Zod-defined protocol layer:
 a Node stdio MCP server with real PTY sessions, a React component for
 terminal UIs, a CLI demo that drives the server end-to-end, a Vite + React 19
 example host wiring the component against a mock adapter, and a base CI

@@ -96,13 +96,17 @@ export function register(program: Command): void {
             // in raw mode goes to the PTY, not to stdin EOF, and Ctrl+C is
             // intentionally forwarded to the PTY too.
             //
-            // The regex is anchored to "Session not found:" (the exact prefix
-            // SessionManager.getSession throws). Round-3 used a looser
-            // /session_id/i fallback that round-4 caught: it would have
-            // swallowed Zod validation errors mentioning the session_id field
-            // and reported them as normal session termination.
+            // Detection order (round-5 P2 hardening):
+            //   1. Prefer the structured `err.code === 'SESSION_NOT_FOUND'`
+            //      tag attached by readResult when the server returns a
+            //      JSON-shaped error envelope. This is robust against
+            //      future wording / localisation changes.
+            //   2. Fall back to matching the canonical English prefix
+            //      "Session not found:" for older server-node builds that
+            //      have not yet adopted the typed-error contract.
+            const code = (err as Error & { code?: string }).code;
             const msg = err instanceof Error ? err.message : String(err);
-            if (/^Session not found:/i.test(msg)) {
+            if (code === 'SESSION_NOT_FOUND' || /^Session not found:/i.test(msg)) {
               detachReason = 'session-ended';
               resolveDetach();
             }

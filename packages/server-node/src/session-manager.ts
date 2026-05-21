@@ -86,6 +86,13 @@ type SessionState = {
   title: string;
   exitCode: number | null;
   disposables: IDisposable[];
+  // origin/agentLabel are part of the v0.1.0 protocol's ListSessionItem
+  // shape (schemas.ts ListSessionItem.origin / .agent_label). Round-5
+  // audit P2: server-node used to discard input.agentLabel and always
+  // report origin: 'user', making agent-spawned sessions indistinguishable
+  // from human-opened ones. Now they round-trip through list().
+  origin: 'user' | 'agent';
+  agentLabel: string | undefined;
 };
 
 function stripAnsi(input: string): string {
@@ -124,6 +131,8 @@ export class SessionManager {
       title,
       exitCode: null,
       disposables: [],
+      origin: input.agentLabel ? 'agent' : 'user',
+      agentLabel: input.agentLabel,
     };
 
     state.disposables.push(
@@ -156,7 +165,8 @@ export class SessionManager {
       session_id: session.id,
       title: session.title,
       cwd: session.cwd,
-      origin: 'user',
+      origin: session.origin,
+      ...(session.agentLabel ? { agent_label: session.agentLabel } : {}),
       created_at: session.createdAt,
       exit_code: session.exitCode,
     }));
@@ -225,7 +235,13 @@ export class SessionManager {
   private getSession(sessionId: string): SessionState {
     const session = this.sessions.get(sessionId);
     if (!session) {
-      throw new Error(`Session not found: ${sessionId}`);
+      // Tag the error with a stable machine code so MCP clients can detect
+      // "session is gone" without parsing the human-readable message. The
+      // message prefix is also stable as a fallback for older clients.
+      // Round-5 audit P2: hardens round-4's regex-only detection in attach.
+      const err = new Error(`Session not found: ${sessionId}`) as Error & { code: string };
+      err.code = 'SESSION_NOT_FOUND';
+      throw err;
     }
     return session;
   }

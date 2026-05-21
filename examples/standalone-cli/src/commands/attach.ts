@@ -1,32 +1,20 @@
 import { Command } from 'commander';
 
-import { extractText, withClient } from '../mcp-client.js';
+import { readResult, withClient } from '../mcp-client.js';
 
 interface CreateSessionResult {
   session_id: string;
   pid?: number;
-  cwd?: string;
-  cols?: number;
-  rows?: number;
 }
 
 interface ReadOutputResult {
   lines: string[];
   next_seq: number;
+  truncated: boolean;
 }
 
 const POLL_DEFAULT_MS = 200;
 const CTRL_C_BYTE = 0x03;
-
-function readResult<O>(raw: unknown): O {
-  const r = raw as { structuredContent?: O; content?: Array<{ type?: string; text?: string }> };
-  if (r.structuredContent !== undefined) return r.structuredContent;
-  const block = r.content?.[0];
-  if (block?.type === 'text' && typeof block.text === 'string') {
-    return JSON.parse(block.text) as O;
-  }
-  throw new Error('attach: callTool returned no parseable result');
-}
 
 export function register(program: Command): void {
   program
@@ -186,7 +174,8 @@ export function register(program: Command): void {
 
           process.stdout.write(`\n[attach exit: ${detachReason}${createdHere && opts.keepAlive ? `; session ${sid} kept alive` : ''}]\n`);
           if (lastError) {
-            process.stderr.write(`[attach warning: last error: ${extractText({ content: [{ type: 'text', text: lastError instanceof Error ? lastError.message : String(lastError) }] })}]\n`);
+            const msg = lastError instanceof Error ? lastError.message : String(lastError);
+            process.stderr.write(`[attach warning: last error: ${msg}]\n`);
           }
         }
       });

@@ -91,12 +91,14 @@ export class SessionManager {
   async create(input: CreateSessionInput): Promise<CreateSessionOutput> {
     const id = randomUUID();
     const cwd = input.cwd ? path.resolve(input.cwd) : process.cwd();
-    const shell = process.env.SHELL || '/bin/zsh';
+    const shell = input.shell ?? process.env.SHELL ?? '/bin/zsh';
+    const cols = input.cols ?? DEFAULT_COLS;
+    const rows = input.rows ?? DEFAULT_ROWS;
     const title = input.name || path.basename(cwd) || 'terminal';
     const pty = spawn(shell, [], {
       name: 'xterm-256color',
-      cols: DEFAULT_COLS,
-      rows: DEFAULT_ROWS,
+      cols,
+      rows,
       cwd,
       env: { ...process.env, TERM: process.env.TERM || 'xterm-256color' },
     });
@@ -134,7 +136,7 @@ export class SessionManager {
       }, 200);
     }
 
-    return { session_id: id };
+    return { session_id: id, pid: pty.pid };
   }
 
   async list(): Promise<ListSessionsOutput> {

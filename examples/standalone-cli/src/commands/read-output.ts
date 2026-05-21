@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 
-import { extractText, withClient } from '../mcp-client.js';
+import { readResult, withClient } from '../mcp-client.js';
 
 type ReadOutputResult = {
   lines: string[];
@@ -26,7 +26,7 @@ export function register(program: Command): void {
             strip_ansi: !options.raw,
           },
         });
-        const output = (result.structuredContent ?? JSON.parse(extractText(result))) as ReadOutputResult;
+        const output = readResult<ReadOutputResult>(result);
         for (const line of output.lines) {
           console.log(line);
         }

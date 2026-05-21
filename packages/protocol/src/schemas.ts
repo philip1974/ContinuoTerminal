@@ -75,6 +75,12 @@ export const createSessionInputSchema = z
     cwd: z.string().optional(),
     name: z.string().optional(),
     agentLabel: z.string().optional(),
+    /** Override the spawned shell binary. Defaults to $SHELL or /bin/zsh. */
+    shell: z.string().optional(),
+    /** PTY column count (default 80). */
+    cols: z.number().int().positive().optional(),
+    /** PTY row count (default 24). */
+    rows: z.number().int().positive().optional(),
     /** spawn 后 delay 200ms(Windows 600)键入此命令 + \n. */
     autorun: z.string().optional(),
     /** topic-05: optional attach hint. */
@@ -85,6 +91,8 @@ export const createSessionInputSchema = z
 export const createSessionOutputSchema = z
   .object({
     session_id: z.string().min(1),
+    /** PTY child pid (when available; node-pty exposes pid on most platforms). */
+    pid: z.number().int().optional(),
   })
   .strict();
 

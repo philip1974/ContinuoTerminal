@@ -2,7 +2,9 @@ import type { MCPClientAdapter } from '@continuo-terminal/react-terminal';
 
 interface SessionState {
   id: string;
+  title: string;
   cwd: string;
+  createdAt: number;
   output: Array<{ seq: number; line: string }>;
   nextSeq: number;
 }
@@ -11,7 +13,14 @@ const sessions = new Map<string, SessionState>();
 
 function newSession(cwd: string): SessionState {
   const id = `mock-${Math.random().toString(36).slice(2, 10)}`;
-  const session: SessionState = { id, cwd, output: [], nextSeq: 0 };
+  const session: SessionState = {
+    id,
+    title: 'mock',
+    cwd,
+    createdAt: Date.now(),
+    output: [],
+    nextSeq: 0,
+  };
   session.output.push({ seq: session.nextSeq++, line: `[mock] session ${id} created in ${cwd}` });
   session.output.push({ seq: session.nextSeq++, line: '[mock] type into the terminal or click Send to append text' });
   sessions.set(id, session);
@@ -28,24 +37,23 @@ export const mockAdapter: MCPClientAdapter = {
 
     if (name === 'terminal.create_session') {
       const session = newSession(typeof input.cwd === 'string' ? input.cwd : '/');
+      // Shape matches @continuo-terminal/protocol createSessionOutputSchema (strict).
       return structured({
         session_id: session.id,
         pid: 0,
-        cwd: session.cwd,
-        cols: 80,
-        rows: 24,
-        created_at: Date.now(),
       }) as unknown as O;
     }
 
     if (name === 'terminal.list_sessions') {
+      // Shape matches protocol sessionItemSchema (strict): session_id / title / cwd /
+      // origin / created_at / exit_code. Mock sessions are always 'user' origin.
       const arr = [...sessions.values()].map((session) => ({
-        id: session.id,
+        session_id: session.id,
+        title: session.title,
         cwd: session.cwd,
-        pid: 0,
-        created_at: 0,
-        title: 'mock',
-        exit_code: null,
+        origin: 'user' as const,
+        created_at: session.createdAt,
+        exit_code: null as number | null,
       }));
       return structured({ sessions: arr }) as unknown as O;
     }
@@ -55,10 +63,15 @@ export const mockAdapter: MCPClientAdapter = {
       const since = (input.since_seq as number | undefined) ?? 0;
       const session = sessions.get(id);
       if (!session) {
-        return structured({ lines: [], next_seq: 0 }) as unknown as O;
+        // Shape matches protocol readOutputOutputSchema (strict): lines / next_seq / truncated.
+        return structured({ lines: [], next_seq: 0, truncated: false }) as unknown as O;
       }
       const after = session.output.filter((output) => output.seq >= since);
-      return structured({ lines: after.map((output) => output.line), next_seq: session.nextSeq }) as unknown as O;
+      return structured({
+        lines: after.map((output) => output.line),
+        next_seq: session.nextSeq,
+        truncated: false,
+      }) as unknown as O;
     }
 
     if (name === 'terminal.send_text') {

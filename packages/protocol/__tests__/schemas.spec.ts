@@ -10,6 +10,8 @@ import {
   MCP_TOOL_KILL,
   createSessionInputSchema,
   createSessionOutputSchema,
+  listSessionsOutputSchema,
+  readOutputOutputSchema,
   sendInputInputSchema,
   readOutputInputSchema,
   killInputSchema,
@@ -118,3 +120,63 @@ describe('killInputSchema', () => {
 });
 
 // Total: 2 + 4 + 3 + 2 + 2 = 13 it() cases (plan-v4 NI-2 v2 locked)
+
+// ── Group 6: v0.1.0 bug-fix additions (B1/B2) ─────────────────────────────
+describe('createSessionInputSchema (B1: shell/cols/rows)', () => {
+  it('accepts shell + cols + rows together', () => {
+    const v = createSessionInputSchema.parse({ shell: '/bin/bash', cols: 100, rows: 30 });
+    expect(v.shell).toBe('/bin/bash');
+    expect(v.cols).toBe(100);
+    expect(v.rows).toBe(30);
+  });
+
+  it('rejects non-positive cols', () => {
+    expect(() => createSessionInputSchema.parse({ cols: 0 })).toThrow();
+    expect(() => createSessionInputSchema.parse({ cols: -5 })).toThrow();
+  });
+});
+
+describe('createSessionOutputSchema (B2: pid)', () => {
+  it('accepts session_id + pid', () => {
+    const v = createSessionOutputSchema.parse({ session_id: 'abc', pid: 12345 });
+    expect(v.pid).toBe(12345);
+  });
+
+  it('accepts session_id without pid (pid is optional)', () => {
+    const v = createSessionOutputSchema.parse({ session_id: 'abc' });
+    expect(v.pid).toBeUndefined();
+  });
+
+  it('rejects extra unknown fields (still strict)', () => {
+    expect(() => createSessionOutputSchema.parse({ session_id: 'abc', cols: 80 } as any)).toThrow();
+  });
+});
+
+// ── Group 7: list/read output shape sanity for mock-adapter alignment ────
+describe('listSessionsOutputSchema (B3 alignment)', () => {
+  it('accepts the mock-adapter-style item shape (session_id/title/cwd/origin/created_at/exit_code)', () => {
+    const v = listSessionsOutputSchema.parse({
+      sessions: [
+        {
+          session_id: 'mock-1',
+          title: 'mock',
+          cwd: '/tmp',
+          origin: 'user',
+          created_at: 1000,
+          exit_code: null,
+        },
+      ],
+    });
+    expect(v.sessions[0]?.origin).toBe('user');
+  });
+});
+
+describe('readOutputOutputSchema (B4 truncated required)', () => {
+  it('requires truncated boolean', () => {
+    expect(() => readOutputOutputSchema.parse({ lines: [], next_seq: 0 } as any)).toThrow();
+  });
+  it('accepts full shape', () => {
+    const v = readOutputOutputSchema.parse({ lines: ['hi'], next_seq: 1, truncated: false });
+    expect(v.truncated).toBe(false);
+  });
+});

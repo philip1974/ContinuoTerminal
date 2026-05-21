@@ -63,7 +63,7 @@ export function Terminal({
     if (typeof adapter.subscribeOutput === 'function') {
       const unsubscribe = adapter.subscribeOutput(sessionId, (lines, nextSeq) => {
         if (lines.length > 0) {
-          terminalRef.current?.write(`${lines.join('\r\n')}\r\n`);
+          terminalRef.current?.write(lines.join('\r\n'));
         }
         sinceSeqRef.current = nextSeq;
       });
@@ -90,7 +90,7 @@ export function Terminal({
         });
         const parsed = parseCallToolResult<ReadOutputOutput>(result);
         if (parsed.lines.length > 0) {
-          terminalRef.current?.write(`${parsed.lines.join('\r\n')}\r\n`);
+          terminalRef.current?.write(parsed.lines.join('\r\n'));
         }
         sinceSeqRef.current = parsed.next_seq;
       } catch (err) {

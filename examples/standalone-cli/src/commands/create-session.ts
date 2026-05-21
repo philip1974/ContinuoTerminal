@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 
-import { extractText, withClient } from '../mcp-client.js';
+import { readResult, withClient } from '../mcp-client.js';
 
 type CreateResult = {
   session_id: string;
@@ -30,7 +30,7 @@ export function register(program: Command): void {
             ...(options.rows ? { rows: options.rows } : {}),
           },
         });
-        const created = (result.structuredContent ?? JSON.parse(extractText(result))) as CreateResult;
+        const created = readResult<CreateResult>(result);
 
         console.log(`session_id=${created.session_id}`);
         console.log(`session_pid=${created.pid ?? 'unknown'}`);

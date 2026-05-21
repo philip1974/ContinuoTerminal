@@ -1,0 +1,35 @@
+{
+  "name": "@continuo-terminal/server-node",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Standalone Node.js stdio MCP server for Continuo Terminal tools. Source-only TypeScript workspace package; runs through tsx and does not build to dist.",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "test": "vitest run __tests__/"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@continuo-terminal/protocol": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "node-pty": "^1.1.0",
+    "zod": "^3.25.0",
+    "zod-to-json-schema": "^3.25.2"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.3"
+  }
+}

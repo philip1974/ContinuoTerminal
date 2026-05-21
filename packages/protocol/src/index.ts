@@ -4,4 +4,4 @@
 // mirrored from Continuo). Keep this barrel minimal: it should not introduce
 // new exports beyond what schemas.ts already defines.
 
-export * from './schemas';
+export * from './schemas.js';

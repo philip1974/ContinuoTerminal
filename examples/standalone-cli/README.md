@@ -16,10 +16,12 @@ pnpm --filter @continuo-terminal/example-standalone-cli demo
 - `create-session [--cwd <path> --shell <path> --cols N --rows N --keep-alive]` - spawn a new session
 - `read-output --session-id <id> [--since-seq N --raw]` - read accumulated output (default strip_ansi=true)
 - `send-text --session-id <id> --text "<text>" [--newline]` - write text to PTY stdin
+- `attach [--session-id <id>] [--cwd <path> --shell <path>] [--poll-ms N --keep-alive]` - interactive mode: forward stdin to PTY (Ctrl+C → press_key, other bytes → send_input) and poll read_output to stdout. Detaches on stdin EOF (Ctrl+D), SIGINT, or SIGTERM and kills the session unless `--keep-alive`.
 - `demo` - end-to-end flow (create + send_text + read_output + kill), prints `session_id=`/`session_pid=`/`captured:`/`demo: SUCCESS` markers
 
-`send-input` (raw bytes) and `press-key` (special keys) are NOT exposed via CLI by design;
-use the workspace package via SDK Client if needed.
+`send-input` (raw bytes) and `press-key` (special keys) are NOT exposed as top-level subcommands;
+they remain accessible to SDK Client callers, and `attach` uses both internally
+to forward stdin and Ctrl+C transparently.
 
 ## Tests
 

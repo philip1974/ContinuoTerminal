@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 
-import { readResult, withClient } from '../mcp-client.js';
+import { readResult, safeKill, withClient } from '../mcp-client.js';
 
 type CreateResult = {
   session_id: string;
@@ -36,7 +36,7 @@ export function register(program: Command): void {
         console.log(`session_pid=${created.pid ?? 'unknown'}`);
 
         if (!options.keepAlive) {
-          await client.callTool({ name: 'terminal.kill', arguments: { session_id: created.session_id } });
+          await safeKill(client, created.session_id);
         }
       });
     });

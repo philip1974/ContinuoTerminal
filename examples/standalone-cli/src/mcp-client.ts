@@ -44,6 +44,25 @@ export function readResult<O>(raw: unknown): O {
   throw new Error('callTool: no structuredContent and no text content');
 }
 
+/**
+ * Best-effort cleanup kill. Used by short-lived cli commands (create-session,
+ * demo, attach) when they want to drop a session on exit but cannot fail the
+ * outer command on cleanup errors. Surfaces non-success outcomes to stderr so
+ * we don't silently lose drift (B26 from the round-2 audit).
+ */
+export async function safeKill(client: Client, sessionId: string): Promise<void> {
+  try {
+    const raw = await client.callTool({ name: 'terminal.kill', arguments: { session_id: sessionId } });
+    const r = raw as { isError?: boolean };
+    if (r.isError) {
+      process.stderr.write(`[cleanup warning: kill ${sessionId}: ${extractText(raw)}]\n`);
+    }
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[cleanup warning: kill ${sessionId} threw: ${msg}]\n`);
+  }
+}
+
 export async function withClient<T>(fn: (client: Client) => Promise<T>): Promise<T> {
   const transport = new StdioClientTransport({
     command: process.execPath,

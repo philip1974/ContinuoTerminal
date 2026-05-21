@@ -180,3 +180,37 @@ describe('readOutputOutputSchema (B4 truncated required)', () => {
     expect(v.truncated).toBe(false);
   });
 });
+
+// ── Group 8 (audit round 2): autorun + attachTarget input coverage (B23/B24) ──
+describe('createSessionInputSchema (B23: autorun)', () => {
+  it('accepts an autorun string alone', () => {
+    const v = createSessionInputSchema.parse({ autorun: 'echo hi' });
+    expect(v.autorun).toBe('echo hi');
+  });
+
+  it('accepts autorun together with shell + cols + rows', () => {
+    const v = createSessionInputSchema.parse({
+      shell: '/bin/zsh',
+      cols: 100,
+      rows: 30,
+      autorun: 'pwd && ls',
+    });
+    expect(v).toEqual({ shell: '/bin/zsh', cols: 100, rows: 30, autorun: 'pwd && ls' });
+  });
+});
+
+describe('createSessionInputSchema (B24: attachTarget)', () => {
+  it("accepts target { kind: 'active' }", () => {
+    const v = createSessionInputSchema.parse({ target: { kind: 'active' } });
+    expect(v.target).toEqual({ kind: 'active' });
+  });
+
+  it("accepts target { kind: 'panel', panelId }", () => {
+    const v = createSessionInputSchema.parse({ target: { kind: 'panel', panelId: 'p1' } });
+    expect(v.target).toEqual({ kind: 'panel', panelId: 'p1' });
+  });
+
+  it("rejects target with kind 'panel' missing panelId (discriminated union)", () => {
+    expect(() => createSessionInputSchema.parse({ target: { kind: 'panel' } } as any)).toThrow();
+  });
+});

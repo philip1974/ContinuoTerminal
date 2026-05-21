@@ -60,6 +60,16 @@ export type ListSessionItem = z.infer<typeof sessionItemSchema>;
  * kind='window' — 指定 windowId,落到该窗口 first visible terminal panel。
  *
  * 现有调用方不传 target 时,行为等价于 { kind: 'active' }(向后兼容)。
+ *
+ * **Status in v0.1.x — reserved / not consumed.** The standalone
+ * `@continuo-terminal/server-node` does not yet read `input.target` — it
+ * ignores the hint and always allocates a fresh PTY. The field is kept on
+ * the schema for forward compatibility with hosts that proxy MCP calls into
+ * a Continuo-style multi-panel renderer (e.g. an Electron / Tauri sidecar
+ * that translates `target.kind` into a window/panel selection before
+ * spawning the session). A future minor bump may wire it through; existing
+ * callers can keep passing `target` without changing the over-the-wire
+ * shape.
  */
 // Legacy host attachment compatibility (Continuo panel/window concept).
 export const attachTargetSchema = z.discriminatedUnion('kind', [
@@ -83,7 +93,12 @@ export const createSessionInputSchema = z
     rows: z.number().int().positive().optional(),
     /** spawn 后 delay 200ms(Windows 600)键入此命令 + \n. */
     autorun: z.string().optional(),
-    /** topic-05: optional attach hint. */
+    /**
+     * Optional attach hint. **Not consumed by server-node 0.1.x** — see
+     * `attachTargetSchema` JSDoc above for the forward-compatibility note.
+     * Hosts proxying MCP calls into a Continuo-style multi-panel renderer
+     * are the intended consumers.
+     */
     target: attachTargetSchema.optional(),
   })
   .strict();

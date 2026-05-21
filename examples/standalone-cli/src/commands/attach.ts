@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 
-import { readResult, withClient } from '../mcp-client.js';
+import { readResult, safeKill, withClient } from '../mcp-client.js';
 
 interface CreateSessionResult {
   session_id: string;
@@ -165,11 +165,7 @@ export function register(program: Command): void {
           restoreStdin();
 
           if (!opts.keepAlive) {
-            try {
-              await client.callTool({ name: 'terminal.kill', arguments: { session_id: sid } });
-            } catch {
-              // best-effort
-            }
+            await safeKill(client, sid);
           }
 
           process.stdout.write(`\n[attach exit: ${detachReason}${createdHere && opts.keepAlive ? `; session ${sid} kept alive` : ''}]\n`);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Terminal } from '@continuo-terminal/react-terminal';
+import { Terminal, parseCallToolResult } from '@continuo-terminal/react-terminal';
 
 import { mockAdapter } from './mock-adapter';
 
@@ -8,9 +8,17 @@ export function App() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Use parseCallToolResult here for the same reason Terminal does internally:
+    // the adapter returns a raw MCP CallToolResult, and parseCallToolResult is the
+    // single decoded path (structuredContent first, content[0].text JSON fallback,
+    // throw on missing). Going through it keeps host code aligned with how
+    // react-terminal handles every other tool response.
     mockAdapter
-      .callTool<{ structuredContent: { session_id: string } }>('terminal.create_session', { cwd: '/' })
-      .then((result) => setSessionId(result.structuredContent.session_id))
+      .callTool<unknown>('terminal.create_session', { cwd: '/' })
+      .then((raw) => {
+        const created = parseCallToolResult<{ session_id: string }>(raw);
+        setSessionId(created.session_id);
+      })
       .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
   }, []);
 

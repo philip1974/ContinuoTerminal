@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 
-import { readResult, withClient } from '../mcp-client.js';
+import { readResult, safeKill, withClient } from '../mcp-client.js';
 import { pollUntil } from '../poll.js';
 
 type CreateResult = {
@@ -36,7 +36,7 @@ export function register(program: Command): void {
       const captured = lines.find((line) => line.includes('hello'));
       console.log(`captured: ${captured?.trim()}`);
 
-      await client.callTool({ name: 'terminal.kill', arguments: { session_id: created.session_id } });
+      await safeKill(client, created.session_id);
 
       console.log('demo: SUCCESS');
     });

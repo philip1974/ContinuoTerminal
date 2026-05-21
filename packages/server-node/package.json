@@ -1,7 +1,7 @@
 {
   "name": "@continuo-terminal/server-node",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Standalone Node.js stdio MCP server for Continuo Terminal tools. Source-only TypeScript workspace package; runs through tsx and does not build to dist.",
   "type": "module",
   "main": "src/index.ts",

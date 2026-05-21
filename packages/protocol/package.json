@@ -1,7 +1,7 @@
 {
   "name": "@continuo-terminal/protocol",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Zod schemas + TS types for Continuo Terminal MCP tools. Source-only TypeScript workspace package; consumers (server-node, react-terminal, hosts) import from src/ directly. No build step; no dist/.",
   "type": "module",
   "exports": {

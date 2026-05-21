@@ -1,7 +1,7 @@
 {
   "name": "@continuo-terminal/react-terminal",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "React 19 + xterm 6 component wired to @continuo-terminal/server-node via MCPClientAdapter interface.",
   "type": "module",
   "main": "src/index.ts",

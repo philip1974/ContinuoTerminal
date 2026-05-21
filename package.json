@@ -12,6 +12,9 @@
   "devDependencies": {
     "typescript": "^5.7.2",
     "vitest": "^2.1.8",
-    "@types/node": "^22.10.0"
+    "@types/node": "^22.10.0",
+    "@continuo-terminal/protocol": "workspace:*",
+    "@continuo-terminal/server-node": "workspace:*",
+    "@continuo-terminal/react-terminal": "workspace:*"
   }
 }

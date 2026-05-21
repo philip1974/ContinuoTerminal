@@ -34,8 +34,8 @@ import { SessionManager } from './session-manager.js';
 const TOOL_DESCRIPTIONS = {
   [MCP_TOOL_CREATE_SESSION]: 'Start a new pseudo-terminal session with optional cwd, env, cols, rows.',
   [MCP_TOOL_LIST_SESSIONS]: 'List all active terminal sessions in this server.',
-  [MCP_TOOL_SEND_INPUT]: "Write raw bytes (base64) to a session's PTY stdin.",
-  [MCP_TOOL_SEND_TEXT]: "Write text to a session's PTY stdin (CR/LF auto-handled).",
+  [MCP_TOOL_SEND_INPUT]: "Write raw string data to a session's PTY stdin (no encoding applied; pass the bytes you want the PTY to read).",
+  [MCP_TOOL_SEND_TEXT]: "Write text to a session's PTY stdin verbatim (no newline normalization; pair with terminal.press_key for Enter).",
   [MCP_TOOL_PRESS_KEY]: 'Press a special key (enter/tab/ctrl_c/arrows/...) in a session.',
   [MCP_TOOL_READ_OUTPUT]: 'Read accumulated output from a session, with optional since_seq cursor and ANSI strip.',
   [MCP_TOOL_KILL]: 'Terminate a session (graceful SIGTERM then SIGKILL fallback).',

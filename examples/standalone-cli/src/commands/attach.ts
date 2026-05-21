@@ -24,8 +24,7 @@ export function register(program: Command): void {
     .option('--cwd <path>', 'cwd when creating a new session')
     .option('--shell <path>', 'shell path when creating a new session')
     .option('--poll-ms <ms>', 'output poll interval in milliseconds', (v: string) => Number.parseInt(v, 10), POLL_DEFAULT_MS)
-    .option('--keep-alive', 'do not kill the session when detaching', false)
-    .action(async (opts: { sessionId?: string; cwd?: string; shell?: string; pollMs: number; keepAlive: boolean }) => {
+    .action(async (opts: { sessionId?: string; cwd?: string; shell?: string; pollMs: number }) => {
       // Safety net: even if anything below throws or process.exit is called
       // unexpectedly, leave the user's terminal in a usable state.
       const restoreStdin = (): void => {
@@ -63,6 +62,12 @@ export function register(program: Command): void {
 
         const sid = sessionId;
 
+        let detachReason = 'eof';
+        let resolveDetach: () => void = () => {};
+        const detached = new Promise<void>((resolve) => {
+          resolveDetach = resolve;
+        });
+
         // Polling read_output → stdout (no overlap; skip tick if previous still inflight).
         let sinceSeq = 0;
         let inFlight = false;
@@ -85,6 +90,16 @@ export function register(program: Command): void {
             }
           } catch (err) {
             lastError = err;
+            // If the server reports the session is gone (PTY exit, killed by
+            // another client, server restart), there is nothing more for us
+            // to read. Detach immediately so the user is not stuck — Ctrl+D
+            // in raw mode goes to the PTY, not to stdin EOF, and Ctrl+C is
+            // intentionally forwarded to the PTY too.
+            const msg = err instanceof Error ? err.message : String(err);
+            if (/Session not found/i.test(msg) || /session_id/i.test(msg)) {
+              detachReason = 'session-ended';
+              resolveDetach();
+            }
           } finally {
             inFlight = false;
           }
@@ -99,12 +114,6 @@ export function register(program: Command): void {
           process.stdin.setRawMode(true);
         }
         process.stdin.resume();
-
-        let detachReason = 'eof';
-        let resolveDetach: () => void = () => {};
-        const detached = new Promise<void>((resolve) => {
-          resolveDetach = resolve;
-        });
 
         const onData = async (chunk: Buffer): Promise<void> => {
           // Ctrl+C → press_key('ctrl_c'). Forward to PTY; do not exit attach
@@ -164,11 +173,13 @@ export function register(program: Command): void {
           for (const l of previousSigtermListeners) process.on('SIGTERM', l as NodeJS.SignalsListener);
           restoreStdin();
 
-          if (!opts.keepAlive) {
-            await safeKill(client, sid);
-          }
+          // Always kill on detach. Even if we didn't, this cli process is
+          // about to exit and that closes the server-node child too, so a
+          // "kept alive" session would die seconds later anyway. The kill
+          // here just makes the post-exit state match what we report.
+          await safeKill(client, sid);
 
-          process.stdout.write(`\n[attach exit: ${detachReason}${createdHere && opts.keepAlive ? `; session ${sid} kept alive` : ''}]\n`);
+          process.stdout.write(`\n[attach exit: ${detachReason}]\n`);
           if (lastError) {
             const msg = lastError instanceof Error ? lastError.message : String(lastError);
             process.stderr.write(`[attach warning: last error: ${msg}]\n`);

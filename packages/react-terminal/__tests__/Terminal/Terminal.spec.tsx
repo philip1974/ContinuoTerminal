@@ -68,4 +68,52 @@ describe('react-terminal Terminal component', () => {
 
     expect(xtermInstance.dispose).toHaveBeenCalled();
   });
+
+  // Round-3 P1 #4: an in-flight read_output that started on the old sessionId
+  // must NOT write its lines to the new xterm or advance the cursor for the
+  // new session. Before the fix, the cancelled-flag guard was missing and a
+  // stale result from session s1 would land in the s2 xterm.
+  it('discards in-flight read_output result after sessionId changes mid-poll', async () => {
+    let resolveStale: (value: unknown) => void = () => {};
+    const stalePromise = new Promise<unknown>((resolve) => {
+      resolveStale = resolve;
+    });
+
+    let callIndex = 0;
+    const adapter: MCPClientAdapter = {
+      callTool: vi.fn(() => {
+        callIndex += 1;
+        if (callIndex === 1) {
+          // First tick (sessionId='s1') — we control when this resolves.
+          return stalePromise;
+        }
+        // All later ticks (sessionId='s2') — immediately empty so the
+        // assertion is only about the stale write.
+        return Promise.resolve({ structuredContent: { lines: [], next_seq: 0 } });
+      }) as unknown as MCPClientAdapter['callTool'],
+    };
+
+    const { rerender } = render(<TerminalComponent sessionId="s1" adapter={adapter} pollIntervalMs={50} />);
+    // Let the first tick start (it will await stalePromise indefinitely).
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Switch sessions. The polling-effect cleanup must flip cancelled=true
+    // for the in-flight tick captured in the s1 effect closure.
+    rerender(<TerminalComponent sessionId="s2" adapter={adapter} pollIntervalMs={50} />);
+    await new Promise((r) => setTimeout(r, 20));
+
+    // Resolve the held s1 promise with what would be stale lines.
+    resolveStale({ structuredContent: { lines: ['STALE-FROM-S1'], next_seq: 999 } });
+    await new Promise((r) => setTimeout(r, 30));
+
+    // Two xterm instances exist (one per sessionId). Neither should have had
+    // the stale lines written to it.
+    const instances = (XTermMock as any).mock.results.map((r: { value: { write: ReturnType<typeof vi.fn> } }) => r.value);
+    for (const inst of instances) {
+      const staleCalls = inst.write.mock.calls.filter((args: unknown[]) =>
+        typeof args[0] === 'string' && args[0].includes('STALE-FROM-S1'),
+      );
+      expect(staleCalls).toEqual([]);
+    }
+  });
 });

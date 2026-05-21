@@ -34,8 +34,3 @@ The package is a private workspace member; do not publish to npm.
 
 Do **not** hand-edit `src/schemas.ts` to diverge from the Continuo source. When the upstream schema in Continuo changes, run a follow-up sync topic in this repo that updates both the schema body and the mirror commit hash in the header comment.
 
-## Examples tsconfig note
-
-`examples/standalone-cli/tsconfig.json` is **validation-only** for the current
-`sample-import.ts` typecheck. When a future topic builds the actual standalone
-CLI, that tsconfig will likely be **replaced** with an emit-enabled config.

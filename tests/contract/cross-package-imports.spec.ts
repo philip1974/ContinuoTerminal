@@ -1,14 +1,16 @@
 // Cross-package import shape contract.
-// Verifies that the monorepo's source-tree entrypoints expose the minimal
-// stable surface other layers depend on. No PTY/session is instantiated and
-// no React component is rendered.
+// Verifies that each package's PACKAGE-NAME entrypoint (the path resolved
+// through its package.json `exports` and the pnpm workspace alias) exposes
+// the minimal stable surface other layers depend on. No PTY/session is
+// instantiated and no React component is rendered.
 //
-// We import each package via its in-tree `src/index.ts` so the contract is
-// "this monorepo's source ships these exports", not "the hoisted copy in
-// node_modules does". Importing the server-node barrel transitively loads
-// node-pty (because src/index.ts re-exports SessionManager); if that import
-// itself fails on a workstation, the failure is a real environmental issue
-// worth catching here (议题 D.5 — same caveat as topic 05).
+// Importing by package name (e.g. '@continuo-terminal/protocol') instead of
+// the in-tree `../../packages/*/src/index` path is what real consumers do.
+// It catches regressions in `exports`, in workspace resolution, and in the
+// barrel files — none of which a deep relative import would detect (P2 #7
+// from round-3 audit). Importing the server-node barrel transitively loads
+// node-pty; if that import itself fails on a workstation, the failure is a
+// real environmental issue worth catching here (议题 D.5).
 
 import { describe, it, expect } from 'vitest';
 
@@ -23,19 +25,19 @@ import {
   KEY_BYTES,
   createSessionInputSchema,
   readOutputOutputSchema,
-} from '../../packages/protocol/src/index';
+} from '@continuo-terminal/protocol';
 
 import {
   SessionManager,
   makeCreateSessionHandler,
   makeListSessionsHandler,
   makeKillHandler,
-} from '../../packages/server-node/src/index';
+} from '@continuo-terminal/server-node';
 
 import {
   Terminal,
   parseCallToolResult,
-} from '../../packages/react-terminal/src/index';
+} from '@continuo-terminal/react-terminal';
 
 describe('protocol package — public surface', () => {
   it('exposes the seven terminal.* MCP tool name constants', () => {

@@ -6,16 +6,18 @@ as composable, host-agnostic packages.
 
 ## Layers
 
-The repository is organised into five active layers (plus stubs for future
-work). Each layer is independently testable and ships with its own
-`package.json` and `tsconfig.json`.
+The repository is organised into six active packages across five layers
+(plus stubs for future work). Each is independently testable and ships
+with its own `package.json` and `tsconfig.json`.
 
 ```
 +----------------------------------------------------------------------+
 |  Layer 5  GUI / examples                                             |
 |  +-------------------------+   +---------------------------------+   |
-|  | examples/standalone-cli |   | examples/minimal-react-host *   |   |
-|  | (Node MCP Client demo)  |   | (planned, not yet implemented)  |   |
+|  | examples/standalone-cli |   | examples/minimal-react-host     |   |
+|  | (Node MCP Client demo)  |   | (Vite + React 19; renders the   |   |
+|  |                         |   |  Terminal component against a   |   |
+|  |                         |   |  mock MCP adapter — no PTY)     |   |
 |  +-----------+-------------+   +----------------+----------------+   |
 |              |                                  |                   |
 +--------------|----------------------------------|-------------------+
@@ -52,29 +54,31 @@ work). Each layer is independently testable and ships with its own
 +----------------------------------------------------------------------+
 ```
 
-\* placeholder packages exist under `examples/` and `crates/` but are not yet
-implemented; future topics will populate them.
+Placeholders still exist for `crates/server-rust` and `examples/tauri-sidecar`;
+future topics will populate them.
 
 ## Package dependency graph
 
-The five active packages depend in one direction (downstream layers depend on
+The six active packages depend in one direction (downstream layers depend on
 upstream layers, never the reverse):
 
 ```
 @continuo-terminal/protocol  (Zod schemas)
             ^
             |
-            +---------------------------+
-            |                           |
-@continuo-terminal/server-node          |
-            ^                           |
-            |                           |
-            |                           |
-@continuo-terminal/react-terminal       |
-            ^                           |
-            |                           |
-@continuo-terminal/example-            +-- (type-only imports)
-   standalone-cli
+            +-----------------------------------------+
+            |                                         |
+@continuo-terminal/server-node                        |
+            ^                                         |
+            |                                         |
+            |                                         |
+@continuo-terminal/react-terminal                     |
+            ^                                         |
+            |                                         |
+            +-------------------+                     |
+            |                   |                     |
+@continuo-terminal/example-     @continuo-terminal/  +-- (type-only imports)
+   minimal-react-host             example-standalone-cli
 ```
 
 - `protocol` has no internal dependencies (only `zod`).
@@ -85,6 +89,9 @@ upstream layers, never the reverse):
   `server-node` at runtime (the host injects the transport).
 - `example-standalone-cli` depends on `protocol` and `server-node`
   (workspace:*) and demonstrates spawning `server-node` over stdio.
+- `example-minimal-react-host` depends on `react-terminal` (workspace:*)
+  and ships a mock `MCPClientAdapter` so the React component can be
+  developed and screenshot-tested without a real PTY backend.
 
 ## Runtime flow (standalone CLI demo)
 

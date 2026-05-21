@@ -8,6 +8,15 @@ importers:
 
   .:
     devDependencies:
+      '@continuo-terminal/protocol':
+        specifier: workspace:*
+        version: link:packages/protocol
+      '@continuo-terminal/react-terminal':
+        specifier: workspace:*
+        version: link:packages/react-terminal
+      '@continuo-terminal/server-node':
+        specifier: workspace:*
+        version: link:packages/server-node
       '@types/node':
         specifier: ^22.10.0
         version: 22.19.19

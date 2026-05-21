@@ -33,11 +33,11 @@ type BufferChunk = {
   bytes: number;
 };
 
-class SessionBuffer {
+/** @internal Exported for unit tests; not part of the package's public API. */
+export class SessionBuffer {
   private chunks: BufferChunk[] = [];
   private totalBytes = 0;
   private nextSeq = 1;
-  private dropped = false;
 
   push(data: string): void {
     const bytes = Buffer.byteLength(data, 'utf8');
@@ -51,16 +51,21 @@ class SessionBuffer {
         break;
       }
       this.totalBytes -= removed.bytes;
-      this.dropped = true;
     }
   }
 
+  // truncated is computed per-read from oldest retained seq vs requested cursor:
+  // if the buffer no longer contains seq=since_seq+1 (because it was dropped),
+  // the consumer has a gap and the read is truncated. Once they catch up to
+  // the new oldest, subsequent reads are no longer truncated. There is no
+  // sticky drop flag — a single drop in the past must not poison every
+  // future read on this session.
   readSince(sinceSeq = 0): { chunks: BufferChunk[]; nextSeq: number; truncated: boolean } {
     const chunks = this.chunks.filter((chunk) => chunk.seq > sinceSeq);
     return {
       chunks,
       nextSeq: this.nextSeq,
-      truncated: this.dropped || (this.chunks[0]?.seq ?? this.nextSeq) > sinceSeq + 1,
+      truncated: (this.chunks[0]?.seq ?? this.nextSeq) > sinceSeq + 1,
     };
   }
 }

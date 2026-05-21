@@ -32,7 +32,7 @@ This installs every workspace package and runs `node-pty`'s install script
 ## Verify the workspace
 
 ```sh
-pnpm typecheck   # runs tsc -p ... for protocol, server-node, react-terminal, examples/standalone-cli
+pnpm typecheck   # runs tsc -p ... for protocol, server-node, react-terminal, examples/minimal-react-host, examples/standalone-cli
 pnpm test        # runs the full vitest suite across all packages
 ```
 

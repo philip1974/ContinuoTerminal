@@ -76,6 +76,12 @@ export function Terminal({
       return;
     }
 
+    // cancelled is the effect-local "generation token" that lets us reject
+    // in-flight read_output results after sessionId / adapter / pollIntervalMs
+    // changes. Without it, a result that started on the old session can write
+    // stale lines into the new terminal and corrupt sinceSeqRef.
+    let cancelled = false;
+
     const tick = async () => {
       if (inFlightRef.current) {
         return;
@@ -88,12 +94,18 @@ export function Terminal({
           since_seq: sinceSeqRef.current,
           strip_ansi: true,
         });
+        if (cancelled) {
+          return;
+        }
         const parsed = parseCallToolResult<ReadOutputOutput>(result);
         if (parsed.lines.length > 0) {
           terminalRef.current?.write(parsed.lines.join('\r\n'));
         }
         sinceSeqRef.current = parsed.next_seq;
       } catch (err) {
+        if (cancelled) {
+          return;
+        }
         onErrorRef.current?.(err);
       } finally {
         inFlightRef.current = false;
@@ -106,6 +118,7 @@ export function Terminal({
     }, pollIntervalMs);
 
     return () => {
+      cancelled = true;
       clearInterval(intervalId);
       inFlightRef.current = false;
     };

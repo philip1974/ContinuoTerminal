@@ -1,0 +1,17 @@
+{
+  "name": "continuo-terminal",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "packageManager": "pnpm@9",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "pnpm exec tsc --noEmit -p packages/protocol/tsconfig.json && pnpm exec tsc --noEmit -p examples/standalone-cli/tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8",
+    "@types/node": "^22.10.0"
+  }
+}

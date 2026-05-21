@@ -1,0 +1,26 @@
+{
+  "name": "@continuo-terminal/example-standalone-cli",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Standalone CLI demoing @continuo-terminal/server-node MCP tools.",
+  "type": "module",
+  "main": "src/cli.ts",
+  "scripts": {
+    "start": "tsx src/cli.ts",
+    "demo": "tsx src/cli.ts demo",
+    "test": "vitest run __tests__/"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@continuo-terminal/protocol": "workspace:*",
+    "@continuo-terminal/server-node": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "commander": "^14.0.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.3"
+  }
+}

@@ -50,7 +50,10 @@ export function createTerminalMcpServer({ sessions = new SessionManager() } = {}
   const server = new Server(
     {
       name: '@continuo-terminal/server-node',
-      version: '0.0.0',
+      // Keep in sync with packages/server-node/package.json version. Hosts
+      // read this via the MCP `initialize` response; round-8 audit P2
+      // caught it stuck at 0.0.0 after the v0.1.0 stamp.
+      version: '0.1.0',
     },
     {
       capabilities: {
@@ -170,9 +173,13 @@ export async function main(): Promise<void> {
       // best-effort: dispose failure must not block transport close
     }
     try {
-      // Server.close() flushes in-flight responses and calls
-      // transport.close() under the hood; we do not call transport.close()
-      // ourselves to avoid double-close.
+      // Server.close() is best-effort: SDK 1.29 Protocol.close() aborts
+      // in-flight request handlers (they observe AbortError) and calls
+      // transport.close() under the hood, but does NOT flush responses
+      // that haven't been sent yet. We don't call transport.close()
+      // ourselves to avoid double-close. Round-8 audit P2: prior comment
+      // overclaimed "flushes in-flight responses" — the SDK source proves
+      // pending responses can be lost during shutdown.
       await withTimeout(server.close(), 'server.close');
     } catch {
       // best-effort: if onclose already fired the transport may be closed

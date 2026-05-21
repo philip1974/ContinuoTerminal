@@ -8,6 +8,31 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 The package is still marked `private` in `package.json` and has not
 been published to npm.
 
+## [Unreleased]
+
+Rounds 3-8 of codex independent audits found cumulative fixes in the
+v0.1.0 surface. These have not been re-stamped as a new version; they
+will roll into the next bump.
+
+### Fixed
+
+- **Polling stale-result race across `sessionId` change** (round-3 P1).
+  The polling `useEffect` now owns an effect-local `cancelled` token;
+  when an in-flight `read_output` await resumes after `sessionId`
+  changed, the result is discarded rather than written into the new
+  xterm and corrupting `sinceSeqRef` for the new session. A regression
+  spec exercises the exact sequence (resolve stale promise after
+  rerender — assert no `STALE-FROM-S1` write).
+- **`subscribeOutput` branch had the same race** (round-5 P1). The
+  pre-fix code only guarded polling, leaving streaming adapters open
+  to the same stale-callback corruption. The subscribe branch now
+  mirrors the cancelled-token pattern. Regression spec uses a no-op
+  unsubscribe and fires the captured callback after rerender.
+- **`Terminal` consumes the new inclusive cursor contract** (round-6
+  P1). The component already stored `next_seq` as the next cursor;
+  the off-by-one was on the server side. No code change here but the
+  fix is observable via the component's own polling tests.
+
 ## [0.1.0] - 2026-05-22
 
 First stamped release. React 19 + xterm 6 component, decoupled from

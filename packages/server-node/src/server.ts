@@ -37,7 +37,7 @@ import { SessionManager } from './session-manager.js';
 // these strings and reality. Verify before changing the schema or
 // SessionManager that the matching line here is updated.
 const TOOL_DESCRIPTIONS = {
-  [MCP_TOOL_CREATE_SESSION]: 'Start a new pseudo-terminal session with optional cwd, shell, cols, rows, autorun, agentLabel, and attach target hint.',
+  [MCP_TOOL_CREATE_SESSION]: 'Start a new pseudo-terminal session with optional cwd, shell, cols, rows, autorun, and agentLabel. (A `target` field is accepted on the schema for forward compatibility but is currently ignored by server-node — see protocol JSDoc for the host-routing roadmap.)',
   [MCP_TOOL_LIST_SESSIONS]: 'List all active terminal sessions in this server.',
   [MCP_TOOL_SEND_INPUT]: "Write a UTF-8 text string to a session's PTY stdin (no encoding transform; bytes that are not valid UTF-8 cannot be transported via this tool — use terminal.press_key for special keys).",
   [MCP_TOOL_SEND_TEXT]: "Write text to a session's PTY stdin verbatim (no newline normalization; pair with terminal.press_key for Enter).",
@@ -180,10 +180,19 @@ export async function main(): Promise<void> {
     process.exit(exitCode);
   };
 
-  transport.onclose = (): void => {
-    // Stdin EOF / host detached → graceful shutdown with 0 exit code.
-    void shutdownAll(0);
-  };
+  // Round-7 P1: the stdin EOF path must be wired directly on process.stdin,
+  // NOT via transport.onclose. SDK 1.29 StdioServerTransport.start() only
+  // listens to 'data' and 'error' on stdin — it never installs 'end' or
+  // 'close' listeners. As a result, transport.onclose only fires when
+  // transport.close() is invoked explicitly (i.e. by us inside shutdownAll
+  // → server.close() → transport.close()), which means relying on it for
+  // host-detach detection was dead code in rounds 5/6: the host closing our
+  // stdin would silently leave every live PTY orphaned. Listening on
+  // process.stdin directly is the only reliable hook.
+  const onStdinClosed = (): void => void shutdownAll(0);
+  process.stdin.once('end', onStdinClosed);
+  process.stdin.once('close', onStdinClosed);
+
   // Round-6 P2: cover the common termination signals, not just SIGINT/
   // SIGTERM. SIGHUP fires when the controlling terminal disappears (ssh
   // disconnect, parent shell exit); SIGQUIT during process supervision.

@@ -125,6 +125,13 @@ export function register(program: Command): void {
         }
         process.stdin.resume();
 
+        // Fatal-mode decoder so invalid UTF-8 throws instead of being
+        // silently replaced with U+FFFD. Round-7 P2: round-6's comment
+        // documented the v0.1 UTF-8-only limitation but the runtime still
+        // mangled bytes silently. Now we drop the chunk and warn on
+        // stderr so the user can diagnose missing input.
+        const fatalUtf8Decoder = new TextDecoder('utf-8', { fatal: true });
+
         const onData = async (chunk: Buffer): Promise<void> => {
           // Ctrl+C → press_key('ctrl_c'). Forward to PTY; do not exit attach
           // ourselves so the user can keep using the session if their program
@@ -137,17 +144,25 @@ export function register(program: Command): void {
             }
             return;
           }
-          // Other raw bytes → send_input. The send_input schema's `data`
-          // field is a string, so we have to decode the Buffer to a string
-          // before sending. UTF-8 is the only safe interpretation for
-          // terminal input in v0.1.0; bytes that are not valid UTF-8 are
-          // replaced with U+FFFD here — a Phase 2 concern (round-6 P2).
-          // Special keys (Ctrl+C, arrows, etc.) go through press_key
-          // instead, which the protocol carries as KEY_BYTES not text.
+          // Other raw bytes → send_input. v0.1.0 send_input only carries a
+          // UTF-8 string; if the chunk is not valid UTF-8 we drop it and
+          // emit a visible warning instead of forwarding mojibake to the
+          // PTY. Special keys go through press_key, which carries KEY_BYTES
+          // separately. A future protocol revision can add a base64 raw-
+          // byte path; until then, "fail loud" beats silent corruption.
+          let text: string;
+          try {
+            text = fatalUtf8Decoder.decode(chunk);
+          } catch {
+            process.stderr.write(
+              `[attach warning: dropped ${chunk.length} byte${chunk.length === 1 ? '' : 's'} of input — not valid UTF-8 (send_input is text-only in v0.1; use press_key for special keys)]\n`,
+            );
+            return;
+          }
           try {
             await client.callTool({
               name: 'terminal.send_input',
-              arguments: { session_id: sid, data: chunk.toString('utf-8') },
+              arguments: { session_id: sid, data: text },
             });
           } catch (err) {
             lastError = err;

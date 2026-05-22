@@ -273,6 +273,29 @@ export class SessionManager {
     };
   }
 
+  /**
+   * Pull-based raw buffer snapshot for non-MCP consumers (e.g. Electron
+   * renderer attach via IPC). Returns the concatenated raw byte stream
+   * (ANSI escapes preserved — not stripped) since `options.sinceSeq`
+   * (default 0 = full history).
+   *
+   * Throws SESSION_NOT_FOUND if the session is unknown — same contract as
+   * sendInput / sendText / pressKey / resize / readOutput. Continuo
+   * `terminal.service.getBufferSnapshot` wraps and maps to empty for IPC
+   * backward compatibility (议题 NEED-INFO-1=b).
+   *
+   * Note: `nextSeq` is a library cursor (use for incremental pulls); IPC
+   * payloads in Continuo do not forward this field.
+   */
+  getBufferSnapshot(
+    sessionId: string,
+    options?: { sinceSeq?: number },
+  ): { data: string; nextSeq: number; truncated: boolean } {
+    const { chunks, nextSeq, truncated } = this.getSession(sessionId).buffer.readSince(options?.sinceSeq ?? 0);
+    const data = chunks.map((chunk) => chunk.data).join('');
+    return { data, nextSeq, truncated };
+  }
+
   async kill(input: SessionManagerKillInput): Promise<KillOutput> {
     const initialSignal = input.signal ?? 'SIGTERM';
     const grace = input.gracePeriodMs ?? 0;

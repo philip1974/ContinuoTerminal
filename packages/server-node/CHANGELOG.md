@@ -92,6 +92,11 @@ next bump.
 - `SessionManager` runtime API extensions: `SessionManagerCreateInput`
   (`session_id` / `args` / `env`) + `SessionManagerOptions.onExit`
   constructor callback (fires before session removal; throws are swallowed)
+- `SessionManager.getBufferSnapshot(sessionId, options?)` — pull-based
+  raw byte buffer snapshot for non-MCP consumers (e.g. Electron renderer
+  attach via IPC). Complements line-based `readOutput()`. Returns
+  `{ data, nextSeq, truncated }`; ANSI sequences preserved. Designed for
+  Continuo Step 2 of 7-step terminal migration.
 
 ## [0.1.0] - 2026-05-22
 

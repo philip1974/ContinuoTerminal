@@ -37,6 +37,28 @@ shapes.
   `SIGKILL`, defaults to `SIGTERM`). No automatic escalation; the caller
   retries with a stronger signal if the process does not exit.
 
+## SessionManager Runtime APIs
+
+### getBufferSnapshot(sessionId, options?)
+
+Returns a raw byte snapshot of the PTY output buffer for the given session,
+intended for non-MCP consumers (e.g. Electron renderer attach via IPC).
+
+**Returns**: `{ data: string; nextSeq: number; truncated: boolean }`
+- `data`: concatenated raw byte stream since `options.sinceSeq` (default 0).
+  ANSI escape sequences are **preserved** (not stripped).
+- `nextSeq`: library cursor for incremental pulls. Note: this field is a
+  library convention and is NOT forwarded in IPC payloads by Continuo.
+- `truncated`: true if any chunks were evicted via maxBytes overflow before
+  the read window.
+
+**Throws**: `Error` with `code === 'SESSION_NOT_FOUND'` if the session is
+unknown. Continuo's `terminal.service.getBufferSnapshot` wrapper maps this
+to an empty snapshot for IPC backward compatibility.
+
+**Use case**: Electron renderer attach pull-based replay (see Continuo
+`src/panels/Terminal/useTerminal.ts:261` readHistory path).
+
 ## Lifecycle
 
 The server installs shutdown handlers on `SIGINT`, `SIGTERM`, `SIGHUP`,

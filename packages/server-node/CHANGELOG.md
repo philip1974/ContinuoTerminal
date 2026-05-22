@@ -71,6 +71,24 @@ next bump.
 - **`server-node/README.md`** rewritten from a placeholder stub to
   mirror `TOOL_DESCRIPTIONS` verbatim and document the lifecycle
   handlers + `SESSION_NOT_FOUND` error envelope (round-7 P2).
+- **`SessionManager.resize(input)`** runtime method to forward
+  `pty.resize(cols, rows)` for an active session. Errors from node-pty
+  propagate to the caller; unknown `session_id` throws SESSION_NOT_FOUND.
+- **`SessionManager.kill()` accepts optional `gracePeriodMs`** via
+  the new `SessionManagerKillInput` type (`KillInput &
+  { gracePeriodMs? }`). When > 0 and `initialSignal !== 'SIGKILL'`,
+  sends the requested signal, waits, then escalates to SIGKILL if the
+  process is still alive. The MCP `terminal.kill` tool surface is
+  unchanged (gracePeriodMs is library-only).
+- **`new SessionManager({ onData?, maxBytes? })`** constructor accepts
+  a per-instance options bag. `onData(sessionId, chunk)` fires after
+  every internal buffer.push; callback exceptions are swallowed (no
+  stderr noise). `maxBytes` controls the ring-buffer cap; invalid
+  values (NaN / Infinity / non-positive / non-integer) throw a
+  `RangeError` at SessionBuffer construction.
+- **`SessionManagerOptions`** and **`SessionManagerKillInput`** are
+  re-exported from `@continuo-terminal/server-node` as type-only
+  exports, so consumers can annotate option bags in strict TS.
 
 ## [0.1.0] - 2026-05-22
 

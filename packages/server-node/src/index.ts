@@ -8,3 +8,4 @@ export { makeSendInputHandler } from './handlers/send-input.js';
 export { makeSendTextHandler } from './handlers/send-text.js';
 export { createTerminalMcpServer, main } from './server.js';
 export { SessionManager } from './session-manager.js';
+export type { SessionManagerOptions, SessionManagerKillInput } from './session-manager.js';

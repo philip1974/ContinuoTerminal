@@ -47,13 +47,19 @@ export class SessionBuffer {
   // emptied entirely — round-4 P2 finding.
   private droppedThroughSeq = 0;
 
+  constructor(private maxBytes: number = MAX_BUFFER_BYTES) {
+    if (!Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
+      throw new RangeError(`maxBytes must be a positive safe integer, got: ${maxBytes}`);
+    }
+  }
+
   push(data: string): void {
     const bytes = Buffer.byteLength(data, 'utf8');
     this.chunks.push({ data, seq: this.nextSeq, bytes });
     this.nextSeq += 1;
     this.totalBytes += bytes;
 
-    while (this.totalBytes > MAX_BUFFER_BYTES && this.chunks.length > 0) {
+    while (this.totalBytes > this.maxBytes && this.chunks.length > 0) {
       const removed = this.chunks.shift();
       if (!removed) {
         break;
@@ -106,6 +112,13 @@ type SessionState = {
   agentLabel: string | undefined;
 };
 
+export type SessionManagerOptions = {
+  onData?: (sessionId: string, chunk: string) => void;
+  maxBytes?: number;
+};
+
+export type SessionManagerKillInput = KillInput & { gracePeriodMs?: number };
+
 function stripAnsi(input: string): string {
   return input.replace(
     // Covers CSI, OSC, and common single-character ANSI escape sequences.
@@ -117,6 +130,13 @@ function stripAnsi(input: string): string {
 
 export class SessionManager {
   private sessions = new Map<string, SessionState>();
+  private _onData: ((sessionId: string, chunk: string) => void) | undefined;
+  private _maxBytes: number;
+
+  constructor(opts: SessionManagerOptions = {}) {
+    this._onData = opts.onData;
+    this._maxBytes = opts.maxBytes ?? MAX_BUFFER_BYTES;
+  }
 
   async create(input: CreateSessionInput): Promise<CreateSessionOutput> {
     const id = randomUUID();
@@ -132,7 +152,7 @@ export class SessionManager {
       cwd,
       env: { ...process.env, TERM: process.env.TERM || 'xterm-256color' },
     });
-    const buffer = new SessionBuffer();
+    const buffer = new SessionBuffer(this._maxBytes);
     const state: SessionState = {
       id,
       pty,
@@ -149,6 +169,13 @@ export class SessionManager {
     state.disposables.push(
       pty.onData((chunk) => {
         buffer.push(chunk);
+        if (this._onData) {
+          try {
+            this._onData(id, chunk);
+          } catch {
+            /* swallow — library layer, no stderr noise (P1-4) */
+          }
+        }
       }),
     );
     state.disposables.push(
@@ -218,19 +245,44 @@ export class SessionManager {
     };
   }
 
-  async kill(input: KillInput): Promise<KillOutput> {
+  async kill(input: SessionManagerKillInput): Promise<KillOutput> {
+    const initialSignal = input.signal ?? 'SIGTERM';
+    const grace = input.gracePeriodMs ?? 0;
     const session = this.sessions.get(input.session_id);
     if (!session) {
       return {};
     }
 
     try {
-      session.pty.kill(input.signal ?? 'SIGTERM');
-    } finally {
-      this.removeSession(input.session_id);
+      session.pty.kill(initialSignal);
+    } catch {
+      /* node-pty swallows internally; mirror that */
     }
+    if (grace > 0 && initialSignal !== 'SIGKILL') {
+      await new Promise<void>((resolve) => setTimeout(resolve, grace));
+      if (this.sessions.has(input.session_id) && session.exitCode === null) {
+        try {
+          session.pty.kill('SIGKILL');
+        } catch {
+          /* swallow */
+        }
+      }
+    }
+    this.removeSession(input.session_id);
 
     return {};
+  }
+
+  /**
+   * Resize the PTY for a session.
+   *
+   * Errors from node-pty's pty.resize() (EBADF / ENOTTY / EINVAL etc.) are
+   * propagated to the caller — no internal catch. Unknown session_id throws
+   * a typed error via getSession() with code === 'SESSION_NOT_FOUND'.
+   */
+  async resize(input: { session_id: string; cols: number; rows: number }): Promise<void> {
+    const session = this.getSession(input.session_id);
+    session.pty.resize(input.cols, input.rows);
   }
 
   async dispose(): Promise<void> {
@@ -240,7 +292,7 @@ export class SessionManager {
     // cleanly before the Node process itself exits. Idempotent: a second
     // call sees an empty sessions Map and returns immediately.
     const ids = [...this.sessions.keys()];
-    await Promise.all(ids.map((id) => this.kill({ session_id: id, signal: 'SIGTERM' })));
+    await Promise.all(ids.map((id) => this.kill({ session_id: id, signal: 'SIGTERM', gracePeriodMs: 0 })));
   }
 
   private getSession(sessionId: string): SessionState {

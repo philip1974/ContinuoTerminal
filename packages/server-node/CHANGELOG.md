@@ -89,6 +89,9 @@ next bump.
 - **`SessionManagerOptions`** and **`SessionManagerKillInput`** are
   re-exported from `@continuo-terminal/server-node` as type-only
   exports, so consumers can annotate option bags in strict TS.
+- `SessionManager` runtime API extensions: `SessionManagerCreateInput`
+  (`session_id` / `args` / `env`) + `SessionManagerOptions.onExit`
+  constructor callback (fires before session removal; throws are swallowed)
 
 ## [0.1.0] - 2026-05-22
 

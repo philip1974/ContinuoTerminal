@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createSessionInputSchema } from '@continuo-terminal/protocol';
 
 import { makeCreateSessionHandler } from '../../src/handlers/create-session.js';
 
@@ -73,5 +74,32 @@ describe('terminal.create_session', () => {
 
     expect(result.isError).toBeUndefined();
     expect(sessions.create).toHaveBeenCalledWith({ target: { kind: 'active' } });
+  });
+
+  it('rejects lib-only fields (session_id / args / env) via createSessionInputSchema.strict()', () => {
+    // Protocol-layer Zod schema must NOT accept SessionManagerCreateInput lib-only fields.
+    expect(() =>
+      createSessionInputSchema.strict().parse({
+        name: 'x',
+        shell: '/bin/zsh',
+        session_id: 'lib-only',
+      }),
+    ).toThrow();
+
+    expect(() =>
+      createSessionInputSchema.strict().parse({
+        name: 'x',
+        shell: '/bin/zsh',
+        args: ['-l'],
+      }),
+    ).toThrow();
+
+    expect(() =>
+      createSessionInputSchema.strict().parse({
+        name: 'x',
+        shell: '/bin/zsh',
+        env: { FOO: 'bar' },
+      }),
+    ).toThrow();
   });
 });

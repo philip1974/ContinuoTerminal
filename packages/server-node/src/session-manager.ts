@@ -115,9 +115,16 @@ type SessionState = {
 export type SessionManagerOptions = {
   onData?: (sessionId: string, chunk: string) => void;
   maxBytes?: number;
+  onExit?: (sessionId: string, info: { exitCode: number; signal?: number }) => void;
 };
 
 export type SessionManagerKillInput = KillInput & { gracePeriodMs?: number };
+
+export type SessionManagerCreateInput = CreateSessionInput & {
+  session_id?: string;
+  args?: string[];
+  env?: Record<string, string>;
+};
 
 function stripAnsi(input: string): string {
   return input.replace(
@@ -132,25 +139,39 @@ export class SessionManager {
   private sessions = new Map<string, SessionState>();
   private _onData: ((sessionId: string, chunk: string) => void) | undefined;
   private _maxBytes: number;
+  private readonly _onExit: ((sessionId: string, info: { exitCode: number; signal?: number }) => void) | undefined;
 
   constructor(opts: SessionManagerOptions = {}) {
     this._onData = opts.onData;
     this._maxBytes = opts.maxBytes ?? MAX_BUFFER_BYTES;
+    this._onExit = opts.onExit;
   }
 
-  async create(input: CreateSessionInput): Promise<CreateSessionOutput> {
-    const id = randomUUID();
+  async create(input: SessionManagerCreateInput): Promise<CreateSessionOutput> {
+    if (input.session_id !== undefined) {
+      if (input.session_id.length === 0) {
+        throw new RangeError(`Session id must be non-empty`);
+      }
+      if (this.sessions.has(input.session_id)) {
+        throw new RangeError(`Session id "${input.session_id}" already in use`);
+      }
+    }
+    const id = input.session_id ?? randomUUID();
+    if (input.args !== undefined && !Array.isArray(input.args)) {
+      throw new TypeError(`args must be a string[] when provided`);
+    }
+    const args = input.args ?? [];
     const cwd = input.cwd ? path.resolve(input.cwd) : process.cwd();
     const shell = input.shell ?? process.env.SHELL ?? '/bin/zsh';
     const cols = input.cols ?? DEFAULT_COLS;
     const rows = input.rows ?? DEFAULT_ROWS;
     const title = input.name || path.basename(cwd) || 'terminal';
-    const pty = spawn(shell, [], {
+    const pty = spawn(shell, args, {
       name: 'xterm-256color',
       cols,
       rows,
       cwd,
-      env: { ...process.env, TERM: process.env.TERM || 'xterm-256color' },
+      env: { ...process.env, TERM: process.env.TERM || 'xterm-256color', ...input.env },
     });
     const buffer = new SessionBuffer(this._maxBytes);
     const state: SessionState = {
@@ -179,8 +200,15 @@ export class SessionManager {
       }),
     );
     state.disposables.push(
-      pty.onExit(({ exitCode }) => {
+      pty.onExit(({ exitCode, signal }) => {
         state.exitCode = exitCode;
+        if (this._onExit) {
+          try {
+            this._onExit(id, { exitCode, signal });
+          } catch {
+            /* swallow — library layer */
+          }
+        }
         this.removeSession(id);
       }),
     );

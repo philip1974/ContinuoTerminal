@@ -73,4 +73,20 @@ describe('server-integration', { timeout: 60_000 }, () => {
     expect(JSON.parse(text)).toEqual({ sessions: [] });
     expect(result.structuredContent).toEqual({ sessions: [] });
   });
+
+  it('terminal.create_session MCP input schema does not expose lib-only fields', async () => {
+    transport = new StdioClientTransport({ command: 'tsx', args: [serverPath] });
+    client = new Client({ name: 'test', version: '0' }, { capabilities: {} });
+
+    await client.connect(transport);
+    const result = await client.listTools();
+    const createTool = result.tools.find((tool) => tool.name === MCP_TOOL_CREATE_SESSION);
+
+    expect(createTool).toBeDefined();
+    const schema = createTool!.inputSchema as { properties?: Record<string, unknown> };
+    expect(schema.properties).toBeDefined();
+    expect(schema.properties).not.toHaveProperty('session_id');
+    expect(schema.properties).not.toHaveProperty('args');
+    expect(schema.properties).not.toHaveProperty('env');
+  });
 });

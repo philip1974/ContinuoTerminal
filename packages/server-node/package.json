@@ -23,7 +23,7 @@
     "node": ">=24"
   },
   "dependencies": {
-    "@continuo-terminal/protocol": "workspace:*",
+    "@continuo-terminal/protocol": "file:../protocol",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "node-pty": "^1.1.0",
     "zod": "^3.25.0",

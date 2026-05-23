@@ -90,6 +90,11 @@ require at least 2 non-Electron consumers merged and exercised for either
 2+ weeks or 3+ meaningful commits each. This sharpens the consumer gate so
 host APIs are not designed from a single application shape.
 
+M5 ships as a stdio launcher demo (Option C):the host is only a launcher,
+and the primary process is the sole MCP controller. The multi-client
+same-server scenario waits for M3 HTTP transport. M5 acts as the first
+non-Electron consumer candidate for the publish gate above.
+
 ## Deliverable Template
 
 **HTTP transport 版**:
@@ -171,6 +176,6 @@ spawn('claude', [], {
 | M2 host-minimal | not started(可能跳到 M5 先做)| — | — |
 | M3 streamable-http | not started | — | — |
 | M4 continuo-adopt-host | not started | — | — |
-| M5 real-demo | not started(可能 M1 后插队,验证替代路径)| — | — |
+| M5 real-demo | **done** | topic 23 | TBD after Op10 commit |
 
 ADR will be updated to reflect each mini-topic's commit hash + verdict as they complete.

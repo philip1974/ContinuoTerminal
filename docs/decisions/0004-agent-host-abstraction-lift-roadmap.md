@@ -176,6 +176,6 @@ spawn('claude', [], {
 | M2 host-minimal | not started(可能跳到 M5 先做)| — | — |
 | M3 streamable-http | not started | — | — |
 | M4 continuo-adopt-host | not started | — | — |
-| M5 real-demo | **done** | topic 23 | TBD after Op10 commit |
+| M5 real-demo | **done** | topic 23 | `18476b8` (2026-05-23, Option C launcher-only) |
 
 ADR will be updated to reflect each mini-topic's commit hash + verdict as they complete.

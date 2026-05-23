@@ -129,7 +129,7 @@ const proxy = await connectLocalSocketStdioProxy({
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
 | CT-B1 local-socket-transport | **done** | topic 33 | bfcd13d (2026-05-23, local Unix socket NDJSON transport, SDK client transport, injectable stdio proxy, private-dir capability guard) |
-| CT-B2 tauri-sidecar-example | **done** | topic 34 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, Rust binary sidecar demo: spawn continuo-terminal-server HTTP + reqwest MCP client + idempotent cleanup; Tauri 2 plugin-shell integration guide) |
+| CT-B2 tauri-sidecar-example | **done** | topic 34 | a36e6c8 (2026-05-23, Rust binary sidecar demo: spawn continuo-terminal-server HTTP + reqwest MCP client + idempotent cleanup; Tauri 2 plugin-shell integration guide) |
 | CT-B3 continuo-socket-adapter | **done** | topic 35 | 4dbfbfb (Continuo) + this ADR backfill (2026-05-23, Continuo adopts CT-B1 framing/safety primitives; copy-config UX byte-compatible; packages/source zero-touch except host strictness fix 01cf467) |
 | CT-B4 plugin-bridge-compat-audit | not started | — | — |
 | CT-B5 mcp-host-retirement-eval | not started | — | — |

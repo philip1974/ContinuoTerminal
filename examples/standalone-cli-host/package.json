@@ -1,0 +1,23 @@
+{
+  "name": "@continuo-terminal/example-standalone-cli-host",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Standalone CLI host demo using HTTP transport and host auth.",
+  "type": "module",
+  "main": "src/host.ts",
+  "scripts": {
+    "start": "tsx src/host.ts",
+    "test": "vitest run __tests__/"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@continuo-terminal/host": "file:../../packages/host",
+    "@modelcontextprotocol/sdk": "^1.29.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.22.3",
+    "vitest": "^2.1.8"
+  }
+}

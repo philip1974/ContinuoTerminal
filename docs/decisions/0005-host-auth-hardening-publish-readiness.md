@@ -157,6 +157,15 @@ that replaces default validation. `stdio-child` plus `auth` fails fast with
 `HostAuthConfigError` because that transport keeps the parent-process trust
 boundary. TLS and multi-host signing remain future ADR scope.
 
+A4 ships `examples/standalone-cli-host` as the second non-desktop consumer
+candidate. The demo consumes `@continuo-terminal/host` through a physical
+`file:` dependency, starts an HTTP host with A3 auth enabled, issues an
+agent env containing `MCP_URL` and `MCP_TOKEN`, and launches a primary agent
+that connects with `StreamableHTTPClientTransport` plus a Bearer header. The
+authorization policy checks generic `scope === 'demo'`; the BDD asserts
+lifecycle markers and log discipline without printing token material. This
+is a consumer exercise, not a commitment to a future CLI package.
+
 ## Deliverable Template(post-ADR 0005)
 
 ```typescript
@@ -226,7 +235,7 @@ spawn('agent-binary', [], { env: { ...process.env, ...env } });
 | A1 token-authority | **done** | topic 28 | 99c8e3d (2026-05-23, opaque bearer + SHA-256 + timingSafeEqual + active prune + ttlMs nullable + revocation) |
 | A2 server-policy-hooks | **done** | topic 29 | 031509c (2026-05-23, 2-layer hooks: authenticate + authorize + MaybePromise + HTTP no-silent-bypass + oracle-leak guard) |
 | A3 host-auth-integration | **done** | topic 30 | de4546a (2026-05-23, host auth option wires TokenStore default authenticate + policy hook + stdio auth config guard) |
-| A4 second-consumer(standalone-cli-host)| not started | — | — |
+| A4 second-consumer(standalone-cli-host)| **done** | topic 31 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, NEW examples/standalone-cli-host: HTTP + A3 auth real consumer; scope-check authorize policy; file: physical consumption) |
 | A5 publish-readiness | not started | — | — |
 
 ADR will be updated to reflect each mini-topic's commit hash + verdict as they complete. Future **ADR 0006** will cover actual npm publish 若 gate 满足 + no API churn。Future **ADR 0007**(or merge with 0006)may cover TLS / production multi-host story if user demand arises.

@@ -127,7 +127,58 @@ export function createTerminalMcpServer({ sessions = new SessionManager() } = {}
   return { server, sessions };
 }
 
-export async function main(): Promise<void> {
+export type MainOptions = {
+  transport?: 'stdio' | 'http';
+  port?: number;
+  host?: string;
+};
+
+async function mainHttp({ port = 0, host = '127.0.0.1' }: MainOptions): Promise<void> {
+  const sessions = new SessionManager();
+  const { startHttpTransport } = await import('./transports/http.js');
+  const started = await startHttpTransport({ sessions, port, host });
+
+  process.stdout.write(`continuo-terminal-server listening on http://${started.address}:${started.port}/mcp\n`);
+
+  const SHUTDOWN_STEP_TIMEOUT_MS = 5000;
+  const withTimeout = async <T>(p: Promise<T>, label: string): Promise<void> => {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        p,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`shutdown timeout: ${label}`)), SHUTDOWN_STEP_TIMEOUT_MS);
+        }),
+      ]);
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
+  let shuttingDown = false;
+  const shutdownAll = async (exitCode: number): Promise<void> => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+    try {
+      await withTimeout(started.shutdown(), 'httpServer.close');
+    } catch {
+      // best-effort: listener may already be closed
+    }
+    try {
+      await withTimeout(sessions.dispose(), 'sessions.dispose');
+    } catch {
+      // best-effort: dispose failure must not block process exit
+    }
+    process.exit(exitCode);
+  };
+
+  process.once('SIGINT', () => void shutdownAll(130));
+  process.once('SIGTERM', () => void shutdownAll(0));
+  process.once('SIGHUP', () => void shutdownAll(0));
+  process.once('SIGQUIT', () => void shutdownAll(0));
+}
+
+async function mainStdio(): Promise<void> {
   const { server, sessions } = createTerminalMcpServer();
   const transport = new StdioServerTransport();
 
@@ -211,6 +262,15 @@ export async function main(): Promise<void> {
   process.once('SIGQUIT', () => void shutdownAll(0));
 
   await server.connect(transport);
+}
+
+export async function main(opts: MainOptions = {}): Promise<void> {
+  if ((opts.transport ?? 'stdio') === 'http') {
+    await mainHttp(opts);
+    return;
+  }
+
+  await mainStdio();
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

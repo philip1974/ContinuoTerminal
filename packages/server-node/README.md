@@ -34,8 +34,46 @@ Options:
 - `--help` / `-h` prints command help.
 - `--version` / `-v` prints the package version.
 
-The CLI currently serves MCP over stdio only. HTTP transport is reserved
-for the M3 transport roadmap.
+The CLI defaults to stdio. Use `--transport http` to expose the same MCP
+tools over Streamable HTTP.
+
+### HTTP transport
+
+Start a local Streamable HTTP MCP server:
+
+```sh
+pnpm exec continuo-terminal-server --transport http --host 127.0.0.1 --port 0
+```
+
+The server prints the actual endpoint after binding:
+
+```text
+continuo-terminal-server listening on http://127.0.0.1:<port>/mcp
+```
+
+Client example:
+
+```ts
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+
+const transport = new StreamableHTTPClientTransport(
+  new URL('http://127.0.0.1:<port>/mcp'),
+);
+const client = new Client({ name: 'example', version: '0' }, { capabilities: {} });
+
+await client.connect(transport);
+console.log(await client.listTools());
+await client.close();
+```
+
+HTTP mode is stateless at the MCP transport layer. Each HTTP request uses
+a fresh SDK server/transport pair while sharing one `SessionManager`, so
+multiple local clients can observe and control the same PTY sessions.
+
+**Warning**: HTTP mode is localhost-first and currently has no auth, CORS,
+or policy layer. Keep the default `127.0.0.1` bind unless you are wrapping
+it with your own trusted local controls.
 
 ## Tools (7 MCP)
 

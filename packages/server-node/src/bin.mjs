@@ -6,11 +6,19 @@ import { pathToFileURL } from 'node:url';
 
 const HELP_TEXT = `Usage: continuo-terminal-server [options]
 
-Run the Continuo Terminal MCP server over stdio.
+Run the Continuo Terminal MCP server.
 
 Options:
-  -h, --help       Show this help message.
-  -v, --version    Print the package version.
+  -h, --help               Show this help message.
+  -v, --version            Print the package version.
+
+Transport options:
+  --transport <mode>       Transport mode: stdio or http. Default: stdio.
+  --host <addr>            HTTP bind address. Default: 127.0.0.1.
+  --port <n>               HTTP port. Use 0 for an ephemeral port. Default: 0.
+
+HTTP transport is localhost-first and currently has no auth, CORS, or
+policy layer. Bind only to trusted local interfaces.
 
 The short alias "ct-server" is also available. Use
 "continuo-terminal-server" as the canonical command name in scripts and
@@ -25,16 +33,49 @@ function getVersion() {
 }
 
 function parseArgs(argv) {
-  for (const arg of argv) {
+  const options = {
+    kind: 'run',
+    transport: 'stdio',
+    host: '127.0.0.1',
+    port: 0,
+  };
+
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
     if (arg === '-h' || arg === '--help') {
       return { kind: 'help' };
     }
     if (arg === '-v' || arg === '--version') {
       return { kind: 'version' };
     }
+    if (arg === '--transport') {
+      const value = argv[++i];
+      if (value !== 'stdio' && value !== 'http') {
+        return { kind: 'error', message: `Invalid --transport: ${value ?? '<missing>'}` };
+      }
+      options.transport = value;
+      continue;
+    }
+    if (arg === '--host') {
+      const value = argv[++i];
+      if (!value) {
+        return { kind: 'error', message: 'Missing value for --host' };
+      }
+      options.host = value;
+      continue;
+    }
+    if (arg === '--port') {
+      const value = argv[++i];
+      const port = Number(value);
+      if (!Number.isInteger(port) || port < 0 || port > 65535) {
+        return { kind: 'error', message: `Invalid --port: ${value ?? '<missing>'}` };
+      }
+      options.port = port;
+      continue;
+    }
     return { kind: 'error', message: `Unknown option: ${arg}` };
   }
-  return { kind: 'run' };
+  return options;
 }
 
 async function loadMain() {
@@ -67,7 +108,11 @@ async function cli() {
   }
 
   const { main } = await loadMain();
-  await main();
+  await main({
+    transport: parsed.transport,
+    port: parsed.port,
+    host: parsed.host,
+  });
 }
 
 cli().catch((err) => {

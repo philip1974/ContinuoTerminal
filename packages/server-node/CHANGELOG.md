@@ -60,6 +60,11 @@ next bump.
 
 ### Added
 
+- **Streamable HTTP transport mode** for the standalone server bin.
+  `continuo-terminal-server --transport http` binds to `127.0.0.1` by
+  default, prints the local `/mcp` URL after listen, and uses per-request
+  SDK server/transport instances with a shared `SessionManager` so local
+  HTTP clients can share PTY sessions.
 - **Standalone CLI bin entry** for the source-only stdio MCP server.
   `continuo-terminal-server` is the canonical command and `ct-server` is
   a short alias; the executable uses a small Node ESM wrapper that resolves

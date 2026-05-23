@@ -225,7 +225,7 @@ spawn('agent-binary', [], { env: { ...process.env, ...env } });
 |---|---|---|---|
 | A1 token-authority | **done** | topic 28 | 99c8e3d (2026-05-23, opaque bearer + SHA-256 + timingSafeEqual + active prune + ttlMs nullable + revocation) |
 | A2 server-policy-hooks | **done** | topic 29 | 031509c (2026-05-23, 2-layer hooks: authenticate + authorize + MaybePromise + HTTP no-silent-bypass + oracle-leak guard) |
-| A3 host-auth-integration | **done** | topic 30 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, host auth option wires TokenStore default authenticate + policy hook + stdio auth config guard) |
+| A3 host-auth-integration | **done** | topic 30 | de4546a (2026-05-23, host auth option wires TokenStore default authenticate + policy hook + stdio auth config guard) |
 | A4 second-consumer(standalone-cli-host)| not started | — | — |
 | A5 publish-readiness | not started | — | — |
 

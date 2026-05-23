@@ -214,7 +214,7 @@ spawn('agent-binary', [], { env: { ...process.env, ...env } });
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
 | A1 token-authority | **done** | topic 28 | 99c8e3d (2026-05-23, opaque bearer + SHA-256 + timingSafeEqual + active prune + ttlMs nullable + revocation) |
-| A2 server-policy-hooks | **done** | topic 29 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, 2-layer hooks: authenticate + authorize + MaybePromise + HTTP no-silent-bypass + oracle-leak guard) |
+| A2 server-policy-hooks | **done** | topic 29 | 031509c (2026-05-23, 2-layer hooks: authenticate + authorize + MaybePromise + HTTP no-silent-bypass + oracle-leak guard) |
 | A3 host-auth-integration | not started | — | — |
 | A4 second-consumer(standalone-cli-host)| not started | — | — |
 | A5 publish-readiness | not started | — | — |

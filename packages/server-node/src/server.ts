@@ -30,6 +30,7 @@ import { makeReadOutputHandler } from './handlers/read-output.js';
 import { makeSendInputHandler } from './handlers/send-input.js';
 import { makeSendTextHandler } from './handlers/send-text.js';
 import { SessionManager } from './session-manager.js';
+import type { AuthContext, AuthorizationDecision, AuthorizeToolCall } from './auth-hooks.js';
 
 // Tool descriptions are surfaced verbatim in tools/list and form the
 // contract LLM/MCP hosts see. They MUST match the actual schema and
@@ -46,7 +47,14 @@ const TOOL_DESCRIPTIONS = {
   [MCP_TOOL_KILL]: 'Terminate a session by sending the requested signal (SIGINT / SIGTERM / SIGKILL; defaults to SIGTERM). No automatic escalation — the caller is responsible for retrying with a stronger signal if the process does not exit.',
 } as const;
 
-export function createTerminalMcpServer({ sessions = new SessionManager() } = {}) {
+export interface CreateTerminalMcpServerOptions {
+  sessions?: SessionManager;
+  auth?: AuthContext | null;
+  authorizeToolCall?: AuthorizeToolCall;
+}
+
+export function createTerminalMcpServer(opts: CreateTerminalMcpServerOptions = {}) {
+  const { sessions = new SessionManager(), auth = null, authorizeToolCall } = opts;
   const server = new Server(
     {
       name: '@continuo-terminal/server-node',
@@ -113,15 +121,38 @@ export function createTerminalMcpServer({ sessions = new SessionManager() } = {}
   }));
 
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
-    const handler = handlers[request.params.name as keyof typeof handlers];
+    const toolName = request.params.name;
+    const args = request.params.arguments ?? {};
+
+    if (authorizeToolCall) {
+      let decision: AuthorizationDecision;
+      try {
+        decision = await authorizeToolCall({ auth, toolName, arguments: args });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        process.stderr.write(`[server-node] authorize hook threw: ${message}\n`);
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: 'authorize hook failure' }],
+        };
+      }
+      if (!decision.allow) {
+        return {
+          isError: true,
+          content: [{ type: 'text' as const, text: decision.reason ?? 'not authorized' }],
+        };
+      }
+    }
+
+    const handler = handlers[toolName as keyof typeof handlers];
     if (!handler) {
       return {
         isError: true,
-        content: [{ type: 'text' as const, text: `Unknown tool: ${request.params.name}` }],
+        content: [{ type: 'text' as const, text: `Unknown tool: ${toolName}` }],
       };
     }
 
-    return handler(request.params.arguments ?? {});
+    return handler(args);
   });
 
   return { server, sessions };

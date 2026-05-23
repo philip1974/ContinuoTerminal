@@ -136,6 +136,17 @@ Public `AgentHost.createAgentEnv` shape unchanged (S1). **A1 token
 authority — HTTP/MCP request enforcement pending A2/A3.** Next:A2
 server-policy-hooks.
 
+A2 ships generic 2-layer auth policy hook shape per codex Q2 design.
+`AuthenticateRequest` (HTTP layer) + `AuthorizeToolCall` (MCP tools) are
+both optional + sync/async via `MaybePromise<T>`. 401 uses JSON-RPC
+envelope + `WWW-Authenticate: Bearer`. `authorizeToolCall` runs before the
+unknown-tool check (oracle-leak guard). HTTP layer startup config
+validation: `authorizeToolCall` must pair with `authenticateRequest`
+(no-silent-bypass) — lib direct use allows `auth: null` caller-owned.
+server-node remains independent of `@continuo-terminal/host` (S3).
+Next:A3 host-auth-integration wires `bootstrapAgentHost.auth` options into
+these hooks.
+
 ## Deliverable Template(post-ADR 0005)
 
 ```typescript
@@ -203,7 +214,7 @@ spawn('agent-binary', [], { env: { ...process.env, ...env } });
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
 | A1 token-authority | **done** | topic 28 | 99c8e3d (2026-05-23, opaque bearer + SHA-256 + timingSafeEqual + active prune + ttlMs nullable + revocation) |
-| A2 server-policy-hooks | not started | — | — |
+| A2 server-policy-hooks | **done** | topic 29 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, 2-layer hooks: authenticate + authorize + MaybePromise + HTTP no-silent-bypass + oracle-leak guard) |
 | A3 host-auth-integration | not started | — | — |
 | A4 second-consumer(standalone-cli-host)| not started | — | — |
 | A5 publish-readiness | not started | — | — |

@@ -71,9 +71,34 @@ HTTP mode is stateless at the MCP transport layer. Each HTTP request uses
 a fresh SDK server/transport pair while sharing one `SessionManager`, so
 multiple local clients can observe and control the same PTY sessions.
 
-**Warning**: HTTP mode is localhost-first and currently has no auth, CORS,
-or policy layer. Keep the default `127.0.0.1` bind unless you are wrapping
-it with your own trusted local controls.
+**Warning**: HTTP mode is localhost-first and the default no-hook path has
+no auth, CORS, or policy layer. Keep the default `127.0.0.1` bind unless
+you are wrapping it with your own trusted local controls.
+
+## Auth policy hooks (A2)
+
+server-node accepts **2 optional hooks**:
+
+- **`authenticateRequest`** on `startHttpTransport({ ... })` - called per
+  HTTP request; returns `AuthContext` or `null` (401). Hooks may be **sync
+  or async** (`MaybePromise`).
+- **`authorizeToolCall`** on `startHttpTransport({ ... })` and
+  `createTerminalMcpServer({ ... })` - called before each `tools/call`
+  (BEFORE the unknown-tool branch, so authorize can deny unknown tool names
+  without leaking tool existence). Returns `{ allow: true }` or
+  `{ allow: false; reason? }` (`isError`). Sync or async.
+
+**HTTP config invariant**: `startHttpTransport` throws at startup if
+`authorizeToolCall` is provided without `authenticateRequest`
+(no-silent-bypass). `createTerminalMcpServer` lib direct use allows
+`authorizeToolCall` with no auth (stdio / lib mode - caller-owned).
+
+**Hook shape only - server-node does not own tokens nor validate them**.
+Host packages own tokens (see `@continuo-terminal/host` A1). When no hook
+is provided, the M3 unauthenticated path is preserved (backwards compat).
+
+A3 mini-topic of ADR 0005 wires `@continuo-terminal/host` token authority
+into these hooks. Until then, callers can implement hooks directly.
 
 ## Tools (7 MCP)
 

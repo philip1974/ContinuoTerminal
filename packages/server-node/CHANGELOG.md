@@ -60,6 +60,21 @@ next bump.
 
 ### Added
 
+- **2-layer auth policy hook shape** (A2 of ADR 0005):
+  - `authenticateRequest` on `startHttpTransport({ ... })` — HTTP-layer
+    authenticate.
+  - `authorizeToolCall` on `createTerminalMcpServer({ ... })` and
+    `startHttpTransport({ ... })` — MCP tool authorize.
+  - Hooks may be sync or async (`MaybePromise<T>` return).
+- **Auth hook types exported** from the package index: `AuthContext`,
+  `AuthenticateRequest`, `AuthorizationDecision`, and `AuthorizeToolCall`.
+- **401 response envelope** for unauthenticated HTTP requests:
+  `{ code: -32001, message: 'unauthorized' }` with
+  `content-type: application/json` and `WWW-Authenticate: Bearer`.
+- **HTTP-layer startup config validation**: `authorizeToolCall` requires
+  `authenticateRequest` (no-silent-bypass).
+- **Oracle-leak guard**: `authorizeToolCall` is invoked before the
+  unknown-tool branch.
 - **Public `startHttpTransport` export** for package consumers that need
   the M3 Streamable HTTP transport without deep-importing server-node
   internals. Added for the M2 host package boundary.
@@ -109,6 +124,18 @@ next bump.
   attach via IPC). Complements line-based `readOutput()`. Returns
   `{ data, nextSeq, truncated }`; ANSI sequences preserved. Designed for
   Continuo Step 2 of 7-step terminal migration.
+
+### Backwards compat
+
+- No-hook path retains M3 unauthenticated behavior exactly. Hooks are
+  additive optional options.
+
+### Notes
+
+- **Hooks added; not wired to host until A3.** Server-node never validates
+  tokens itself — host packages own token authority (see
+  `@continuo-terminal/host` A1 ship). A3 mini-topic of ADR 0005 wires
+  `bootstrapAgentHost` into these hooks.
 
 ## [0.1.0] - 2026-05-22
 

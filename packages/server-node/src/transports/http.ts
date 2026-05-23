@@ -5,12 +5,15 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 
 import { createTerminalMcpServer } from '../server.js';
 import type { SessionManager } from '../session-manager.js';
+import type { AuthContext, AuthenticateRequest, AuthorizeToolCall } from '../auth-hooks.js';
 
 export type StartHttpTransportInput = {
   sessions: SessionManager;
   port: number;
   host: string;
   endpoint?: string;
+  authenticateRequest?: AuthenticateRequest;
+  authorizeToolCall?: AuthorizeToolCall;
 };
 
 export type StartedHttpTransport = {
@@ -39,8 +42,31 @@ async function handleMcpRequest(
   req: IncomingMessage,
   res: ServerResponse,
   sessions: SessionManager,
+  authenticateRequest: AuthenticateRequest | undefined,
+  authorizeToolCall: AuthorizeToolCall | undefined,
 ): Promise<void> {
-  const { server } = createTerminalMcpServer({ sessions });
+  let auth: AuthContext | null = null;
+  if (authenticateRequest) {
+    auth = await authenticateRequest({
+      authorizationHeader: req.headers.authorization,
+      method: req.method ?? '',
+      url: req.url ?? '',
+    });
+    if (auth === null) {
+      res.writeHead(401, {
+        'content-type': 'application/json',
+        'www-authenticate': 'Bearer',
+      });
+      res.end(JSON.stringify({
+        jsonrpc: '2.0',
+        error: { code: -32001, message: 'unauthorized' },
+        id: null,
+      }));
+      return;
+    }
+  }
+
+  const { server } = createTerminalMcpServer({ sessions, auth, authorizeToolCall });
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   });
@@ -58,7 +84,16 @@ export async function startHttpTransport({
   port,
   host,
   endpoint = '/mcp',
+  authenticateRequest,
+  authorizeToolCall,
 }: StartHttpTransportInput): Promise<StartedHttpTransport> {
+  if (authorizeToolCall && !authenticateRequest) {
+    throw new Error(
+      '@continuo-terminal/server-node: authorizeToolCall requires authenticateRequest ' +
+      'in startHttpTransport (HTTP-layer silent-bypass risk). See ADR 0005 §A2.',
+    );
+  }
+
   const httpServer = createServer((req, res) => {
     if (!matchesEndpoint(req.url, endpoint)) {
       res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
@@ -66,7 +101,7 @@ export async function startHttpTransport({
       return;
     }
 
-    void handleMcpRequest(req, res, sessions).catch((err: unknown) => {
+    void handleMcpRequest(req, res, sessions, authenticateRequest, authorizeToolCall).catch((err: unknown) => {
       if (res.headersSent) return;
       const message = err instanceof Error ? err.message : String(err);
       res.writeHead(500, { 'content-type': 'application/json' });

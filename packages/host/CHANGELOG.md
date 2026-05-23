@@ -7,12 +7,22 @@ file.
 
 ### Changed
 
+- TokenStore rewritten with cryptographically strong local bearer tokens
+  (`crypto.randomBytes` 256-bit value, SHA-256 hashed storage, constant-time
+  validate, 30min default TTL with active pruning, revocation API).
+  **A1 token authority - HTTP/MCP request enforcement pending A2/A3.**
+  Plaintext token value is never retained internally; only SHA-256 digest
+  plus read-only metadata.
 - Resolve `@continuo-terminal/server-node` through `file:../server-node`
   instead of `workspace:*` so outside-workspace `file:` consumers can install
   `@continuo-terminal/host`.
 
 ### Added
 
+- `Token` / `IssueInput` / `IssueResult` types exported.
+- `TokenStore.revokeById(id)` / `.revokeBySubject(subject)` / `.size()`.
+- `ttlMs: number | null` support on issue (`null` = no expiry for controlled
+  local demos; `undefined` = default 30min; `<= 0` throws).
 - Initial experimental `bootstrapAgentHost` facade with `stdio-child` and
   local Streamable HTTP transport options.
 - `createAgentEnv()` helper for composing generic agent env variables:

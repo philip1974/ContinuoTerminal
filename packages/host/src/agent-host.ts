@@ -49,11 +49,16 @@ export class AgentHostImpl implements AgentHost {
 
   createAgentEnv(input: CreateAgentEnvInput): AgentEnv {
     if (this.disposed) throw new HostDisposedError();
-    const token = this.tokens.issue();
+    const issued = this.tokens.issue({
+      subject: input.subject,
+      scope: input.scope,
+      workspaceRoot: input.workspaceRoot,
+      metadata: input.metadata,
+    });
     return composeAgentEnv({
       ...input,
       transportInfo: this.transportInfo,
-      token,
+      token: issued.value,
     });
   }
 

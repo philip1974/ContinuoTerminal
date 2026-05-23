@@ -126,6 +126,16 @@ ADR 0005 **codifies + tracks** gate,not promises publish:
 
 A1 → A2 → A3 → A4 → A5(no skipping;A2 needs A1 token shape;A3 wires A1+A2;A4 exercises A3 ship;A5 audits after A4 done)
 
+A1 ships real opaque bearer authority replacing M2 placeholder UUID Set.
+Plaintext token value uses `crypto.randomBytes(32)` base64url (256-bit,
+43 chars);storage is SHA-256 digest only (plaintext never retained);
+validate uses `crypto.timingSafeEqual` constant-time;default 30min TTL
+with active pruning on issue/revoke + lazy on validate;`ttlMs: null`
+supports no-expiry local demos;revocation by tokenId/subject/clear.
+Public `AgentHost.createAgentEnv` shape unchanged (S1). **A1 token
+authority — HTTP/MCP request enforcement pending A2/A3.** Next:A2
+server-policy-hooks.
+
 ## Deliverable Template(post-ADR 0005)
 
 ```typescript
@@ -192,7 +202,7 @@ spawn('agent-binary', [], { env: { ...process.env, ...env } });
 
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
-| A1 token-authority | not started | — | — |
+| A1 token-authority | **done** | topic 28 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, opaque bearer + SHA-256 + timingSafeEqual + active prune + ttlMs nullable + revocation) |
 | A2 server-policy-hooks | not started | — | — |
 | A3 host-auth-integration | not started | — | — |
 | A4 second-consumer(standalone-cli-host)| not started | — | — |

@@ -1,27 +1,185 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TokenStore } from '../../src/token.js';
 
+const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
+
+function entryFor(store: TokenStore, tokenId: string): unknown {
+  return (store as unknown as { entries: Map<string, unknown> }).entries.get(tokenId);
+}
+
 describe('TokenStore', () => {
-  it('issues and validates a token', () => {
-    const store = new TokenStore();
-    const token = store.issue();
-
-    expect(store.validate(token)).toBe(true);
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-05-23T00:00:00.000Z'));
   });
 
-  it('rejects invalid tokens', () => {
-    const store = new TokenStore();
-
-    expect(store.validate('not-issued')).toBe(false);
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
-  it('clears issued tokens', () => {
+  it('issues a 256-bit base64url bearer value and token metadata', () => {
     const store = new TokenStore();
-    const token = store.issue();
+    const issued = store.issue({
+      subject: 'agent-a',
+      scope: 'demo',
+      workspaceRoot: '/tmp/work',
+      metadata: { role: 'primary' },
+    });
+
+    expect(issued.value).toMatch(TOKEN_RE);
+    expect(issued.token).toMatchObject({
+      tokenId: expect.any(String),
+      subject: 'agent-a',
+      scope: 'demo',
+      workspaceRoot: '/tmp/work',
+      metadata: { role: 'primary' },
+      issuedAt: Date.now(),
+      expiresAt: Date.now() + 30 * 60 * 1000,
+    });
+  });
+
+  it('stores only digest and metadata internally, never plaintext token value', () => {
+    const store = new TokenStore();
+    const issued = store.issue({ subject: 'agent-a' });
+    const entry = entryFor(store, issued.token.tokenId);
+
+    expect(entry).toMatchObject({
+      digest: expect.any(Buffer),
+      metadata: issued.token,
+    });
+    expect((entry as { digest: Buffer }).digest).toHaveLength(32);
+    expect(entry).not.toHaveProperty('value');
+    expect(entry).not.toHaveProperty('plainValue');
+    expect(entry).not.toHaveProperty('token');
+  });
+
+  it('validates a matching value and returns token metadata', () => {
+    const store = new TokenStore();
+    const issued = store.issue({
+      subject: 'agent-a',
+      scope: 'trusted',
+      metadata: { lane: 'a' },
+    });
+
+    expect(store.validate(issued.value)).toEqual(issued.token);
+  });
+
+  it('returns null for wrong token values', () => {
+    const store = new TokenStore();
+    store.issue({ subject: 'agent-a' });
+
+    expect(store.validate('not-issued')).toBeNull();
+  });
+
+  it('returns null for empty and non-string values', () => {
+    const store = new TokenStore();
+    store.issue({ subject: 'agent-a' });
+
+    expect(store.validate('')).toBeNull();
+    expect(store.validate(undefined as unknown as string)).toBeNull();
+  });
+
+  it('expires default-TTL tokens lazily during validation and removes entries', () => {
+    const store = new TokenStore();
+    const issued = store.issue({ subject: 'agent-a' });
+
+    vi.advanceTimersByTime(30 * 60 * 1000 + 1);
+
+    expect(store.validate(issued.value)).toBeNull();
+    expect(store.size()).toBe(0);
+  });
+
+  it('expires explicit ttlMs tokens', () => {
+    const store = new TokenStore();
+    const issued = store.issue({ subject: 'agent-a', ttlMs: 1 });
+
+    vi.advanceTimersByTime(2);
+
+    expect(store.validate(issued.value)).toBeNull();
+  });
+
+  it('supports ttlMs:null for no-expiry local demos', () => {
+    const store = new TokenStore();
+    const issued = store.issue({ subject: 'agent-a', ttlMs: null });
+
+    vi.advanceTimersByTime(10 * 365 * 24 * 60 * 60 * 1000);
+
+    expect(issued.token.expiresAt).toBeUndefined();
+    expect(store.validate(issued.value)).toEqual(issued.token);
+  });
+
+  it('rejects non-positive and non-finite ttlMs values', () => {
+    const store = new TokenStore();
+
+    expect(() => store.issue({ subject: 'agent-a', ttlMs: 0 })).toThrow(RangeError);
+    expect(() => store.issue({ subject: 'agent-a', ttlMs: -1 })).toThrow(RangeError);
+    expect(() => store.issue({ subject: 'agent-a', ttlMs: Number.NaN })).toThrow(RangeError);
+  });
+
+  it('deep-clones metadata on issue', () => {
+    const store = new TokenStore();
+    const metadata = { role: 'primary' };
+    const issued = store.issue({ subject: 'agent-a', metadata });
+
+    metadata.role = 'mutated';
+
+    expect(issued.token.metadata).toEqual({ role: 'primary' });
+    expect(store.validate(issued.value)?.metadata).toEqual({ role: 'primary' });
+  });
+
+  it('revokes tokens by token id and reports whether one existed', () => {
+    const store = new TokenStore();
+    const issued = store.issue({ subject: 'agent-a' });
+
+    expect(store.revokeById(issued.token.tokenId)).toBe(true);
+    expect(store.validate(issued.value)).toBeNull();
+    expect(store.revokeById(issued.token.tokenId)).toBe(false);
+  });
+
+  it('revokes all tokens for a subject and leaves other subjects untouched', () => {
+    const store = new TokenStore();
+    const first = store.issue({ subject: 'agent-a' });
+    const second = store.issue({ subject: 'agent-a' });
+    const other = store.issue({ subject: 'agent-b' });
+
+    expect(store.revokeBySubject('agent-a')).toBe(2);
+    expect(store.validate(first.value)).toBeNull();
+    expect(store.validate(second.value)).toBeNull();
+    expect(store.validate(other.value)).toEqual(other.token);
+  });
+
+  it('actively prunes expired tokens on issue', () => {
+    const store = new TokenStore();
+    const expired = store.issue({ subject: 'agent-a', ttlMs: 1 });
+    vi.advanceTimersByTime(2);
+
+    const fresh = store.issue({ subject: 'agent-b' });
+
+    expect(entryFor(store, expired.token.tokenId)).toBeUndefined();
+    expect(store.size()).toBe(1);
+    expect(store.validate(fresh.value)).toEqual(fresh.token);
+  });
+
+  it('actively prunes expired tokens on revokeBySubject even when target is absent', () => {
+    const store = new TokenStore();
+    const expired = store.issue({ subject: 'agent-a', ttlMs: 1 });
+    vi.advanceTimersByTime(2);
+
+    expect(store.revokeBySubject('absent')).toBe(0);
+    expect(entryFor(store, expired.token.tokenId)).toBeUndefined();
+    expect(store.size()).toBe(0);
+  });
+
+  it('clears all tracked tokens', () => {
+    const store = new TokenStore();
+    const first = store.issue({ subject: 'agent-a' });
+    const second = store.issue({ subject: 'agent-b' });
 
     store.clear();
 
-    expect(store.validate(token)).toBe(false);
+    expect(store.size()).toBe(0);
+    expect(store.validate(first.value)).toBeNull();
+    expect(store.validate(second.value)).toBeNull();
   });
 });

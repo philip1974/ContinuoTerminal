@@ -1,11 +1,18 @@
 # @continuo-terminal/host
 
-> TOKEN IS NOT AUTHENTICATION - PLACEHOLDER ONLY.
+> WARNING: Bearer-token issuance is real; HTTP/MCP enforcement pending A2/A3.
 >
-> `MCP_TOKEN` is currently an in-memory placeholder used to validate API
-> shape. It does not protect HTTP, stdio, PTYs, or tool calls. Do not expose
-> HTTP mode beyond trusted local interfaces until a real auth and policy layer
-> lands.
+> Cryptographically strong local bearer tokens are now issued and tracked
+> (256-bit `crypto.randomBytes`, SHA-256 hashed storage, `crypto.timingSafeEqual`
+> constant-time compare, default 30min TTL with active pruning, revocation by
+> tokenId / subject / all).
+>
+> **HTTP/MCP request enforcement lands in A2/A3** - until those mini-topics ship,
+> issued tokens are not yet consumed as authorization on the server side.
+>
+> This package remains `private:true` and `@experimental`; no transport-layer
+> protection (TLS) is wired (future ADR). Do NOT use as a remote-production
+> security boundary.
 
 Experimental host bootstrap and agent environment helpers for Continuo
 Terminal. The package is `private: true` and the API is not publish-ready.
@@ -50,5 +57,5 @@ The intentionally small candidate surface is:
 - `AgentHost.dispose()`
 - `AgentHost.transportInfo`
 
-Agent-side connection helpers stay in user code for now. Real token issue,
-validation, authorization policy, and cross-process auth remain future work.
+Agent-side connection helpers stay in user code for now. HTTP/MCP request
+enforcement, authorization policy, and cross-process auth remain future work.

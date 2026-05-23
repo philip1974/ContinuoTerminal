@@ -39,3 +39,5 @@ export interface AgentHost {
   createAgentEnv(input: CreateAgentEnvInput): AgentEnv;
   dispose(): Promise<void>;
 }
+
+export type { IssueInput, IssueResult, Token } from './token.js';

@@ -132,7 +132,7 @@ const proxy = await connectLocalSocketStdioProxy({
 | CT-B2 tauri-sidecar-example | **done** | topic 34 | a36e6c8 (2026-05-23, Rust binary sidecar demo: spawn continuo-terminal-server HTTP + reqwest MCP client + idempotent cleanup; Tauri 2 plugin-shell integration guide) |
 | CT-B3 continuo-socket-adapter | **done** | topic 35 | 4dbfbfb (Continuo) + this ADR backfill (2026-05-23, Continuo adopts CT-B1 framing/safety primitives; copy-config UX byte-compatible; packages/source zero-touch except host strictness fix 01cf467) |
 | CT-B4 plugin-bridge-compat-audit | **done** | topic 36 | (audit-only, no code commits) 2026-05-23, finds Q1+Q2 gaps (dynamic tool register + tools/list_changed) but Q3+Q4 Electron-specific; recommends Option 3 (document parallel as intentional); codex AGREE | 
-| CT-B5 mcp-host-retirement-eval | not started | — | — |
+| CT-B5 mcp-host-retirement-eval | **done** | topic 37 | (decision-only, no code commits) 2026-05-23, adopts CT-B4 Option 3: Continuo mcp-host.service.ts NOT retired; ContinuoTerminal server-node stays static; future-trigger conditions documented | 
 
 ADR 将随每 mini-topic ship 更新 commit hash + verdict。
 
@@ -157,6 +157,42 @@ CT-B4 plugin-bridge-compat-audit ships as **audit-only**(no code changes per ADR
 - Option 2(extend ContinuoTerminal with generic dynamic tool API now):defer — no current consumer demand;adding API surface preemptively risks future churn
 
 Audit verifies Continuo bridge architecture is sound for its product context;parallel implementation acceptable outcome per ADR 0006 §5 "CT-B5 可能输出 '不退役'决定"。
+
+### CT-B5 ship note — ADR 0006 phase COMPLETE
+
+CT-B5 mcp-host-retirement-eval ships as **decision-only**(no code changes;inherits CT-B4 audit Option 3 with codex AGREE verdict)。
+
+**Decision**:**Continuo `mcp-host.service.ts`(618 LOC)NOT retired**;ContinuoTerminal `packages/server-node` stays **static around 7 terminal tools**。
+
+**Rationale**(per CT-B4 audit):
+- Continuo plugin-mcp-bridge serves Continuo's plugin system(Electron-specific:webContents IPC + wcId tracking)— forcing it into generic ContinuoTerminal violates ADR 0006 §3 invariant
+- Continuo `mcp-host.service` already implements dynamic tool API + `sendToolListChanged` wiring correctly for its product context
+- No current non-Electron consumer demands dynamic-tool registry(AiQ uses Rust portable-pty;M5+A4 use static 7 tools)
+- Adding dynamic-tool API to ContinuoTerminal preemptively = scope creep without consumer demand
+
+**Future-trigger conditions**(future ADR if triggered):
+- AiQ evolves to need MCP-exposed tools beyond terminal session control
+- X project consumer demonstrates dynamic-tool need with design proposal
+- Estimated scope when triggered:~30 LOC for `host.registerTool/removeTool` + internal `sendToolListChanged` wire
+
+## ADR 0006 phase COMPLETE(2026-05-23)
+
+All 5 mini-topics shipped:
+- **CT-B1** ✓ bfcd13d — local-socket NDJSON transport with capability auth
+- **CT-B2** ✓ a36e6c8 — examples/tauri-sidecar Rust binary demo + Tauri 2 plugin-shell integration guide
+- **CT-B3** ✓ 4dbfbfb(Continuo)+ ce384ec(ADR backfill)— Continuo adopts CT-B1 framing/safety primitives;copy-config UX byte-compatible
+- **CT-B4** ✓ c4284e3(audit-only)— plugin-bridge compat audit;parallel implementation recommended
+- **CT-B5** ✓ this commit(decision-only)— mcp-host parallel-as-intentional documented;ADR 0006 phase complete
+
+**Strategic goals achieved**:
+- **P1 Continuo 真依赖 ContinuoTerminal** — CT-B3 confirms via framing + safety primitives adoption。Continuo plugin bridge layer stays Continuo-internal(correct per CT-B4)
+- **P2 AiQ Tauri sidecar pattern** — CT-B2 proves Rust binary spawning + reqwest MCP HTTP client;README guides Tauri 2 `tauri-plugin-shell` integration
+
+**Outstanding**(future ADRs if demand emerges):
+- ADR 0007(or later):Dynamic tool registry in ContinuoTerminal server-node — defer until concrete non-Electron consumer demand
+- ADR 0006-publish(former planned ADR 0006):actual npm publish — deferred indefinitely per user decision;file: workspace remains consumption model
+- ADR for AiQ specific integration if AiQ adopts ContinuoTerminal sidecar pattern in production app
+- ADR for TLS / multi-host production story(per ADR 0005)— still deferred
 
 ### CT-B1 ship note
 

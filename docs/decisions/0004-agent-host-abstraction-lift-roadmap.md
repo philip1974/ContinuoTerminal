@@ -167,7 +167,7 @@ spawn('claude', [], {
 
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
-| M1 server-node-bin | **done** | topic 22 | TBD after Op9 commit |
+| M1 server-node-bin | **done** | topic 22 | `1a1b592` (2026-05-23) |
 | M2 host-minimal | not started(可能跳到 M5 先做)| — | — |
 | M3 streamable-http | not started | — | — |
 | M4 continuo-adopt-host | not started | — | — |

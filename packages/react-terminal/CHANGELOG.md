@@ -14,6 +14,17 @@ Rounds 3-8 of codex independent audits found cumulative fixes in the
 v0.1.0 surface. These have not been re-stamped as a new version; they
 will roll into the next bump.
 
+### Added (ADR 0003 C3 pragmatic)
+
+- `createHttpMCPClientAdapter({ endpoint, token?, fetch? })` factory —
+  fetch-based `MCPClientAdapter` for the `<Terminal>` component talking
+  to a real `@continuo-terminal/server-node` HTTP endpoint. Supports
+  optional Bearer token (A2/A3 auth), accepts both `application/json`
+  and `text/event-stream` SSE responses (SDK Streamable HTTP invariant).
+  Enables external embedding scenarios (browser / VS Code webview /
+  Tauri renderer / standalone web demo) without requiring Electron IPC.
+- New type `CreateHttpMCPClientAdapterInput` exported from package index.
+
 ### Fixed
 
 - **Polling stale-result race across `sessionId` change** (round-3 P1).

@@ -66,7 +66,7 @@ Topic 21(Step 3a)实操中发现:**Step 3 内容大部分已被 Step 1/2 baselin
 
 | ID | Concern | Priority | Type |
 |---|---|---|---|
-| ~~**C1**~~ | ~~Continuo `package.json` direct dep `node-pty` 删(transitively via server-node)~~ | ~~low~~ | **DEFERRED** — `vi.mock('node-pty')` in `ansi-strip-regression.spec.ts:6` 依赖 direct dep path 解析;删 dep 后 spec 6/6 FAIL;需独立 vi.mock path migration topic |
+| **C1** | Continuo `package.json` direct dep `node-pty` 删(transitively via server-node) | low | **DONE** Continuo commit `570b229` 2026-05-23。Solution:move from `dependencies` → `devDependencies`(no Continuo runtime imports — verified via grep;test vi.mock + electron-rebuild 都需 devDep 装机 node_modules)。Continuo full suite 2449/2449 PASS;ansi-strip-regression 6/6 PASS;typecheck 0;ContinuoTerminal server-node 111 + host 43 不退化。Prod consumer footprint reduces — `node-pty` no longer listed as direct runtime dep |
 | **C2** | ~~Continuo `terminal-sessions.service.ts` lifecycle state machine JSDoc promote(red-team-v1 P1-2 insight)~~ | ~~low~~ | **DONE** Continuo commit `f467907` |
 | **C3** | renderer `useTerminal.ts` attach 改走 server-node MCP channel(future external IDE / standalone CLI 嵌入铺路)| high if external embedding pursued | architectural |
 | **C4** | `terminal-window-isolation` 机制 evaluate — Continuo internal vs server-node abstraction(目前 Continuo internal 工作良好,无 immediate need)| nice-to-have | design review |
@@ -96,7 +96,7 @@ ADR 0001 + 0002 invariants 仍 hold(Step 1+2 ship 实证):
 
 - **renderer attach 仍走 Electron IPC**(not server-node MCP)— C3 follow-up;不是核心 migration goal,但 external embedding scenario 才需要
 - **terminal-window-isolation 仍 Continuo internal**(server-node 不知 Electron window)— C4 design review pending
-- **node-pty direct dep 未清**(C1)— low priority,functional 无影响
+- ~~**node-pty direct dep 未清**(C1)~~ — **resolved**(C1 done 2026-05-23 via move to devDependencies)
 - **Manual GUI attestation deferred**(C5)— 议题 H.7.3 合规但 closure-ish
 - **Step 3a/3b lessons**:future migration plan 应先做 **baseline gap analysis**(测真实 delta 与目标 architecture 的差距),避免 over-claimed step scope
 

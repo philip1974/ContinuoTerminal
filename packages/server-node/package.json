@@ -5,6 +5,10 @@
   "description": "Standalone Node.js stdio MCP server for Continuo Terminal tools. Source-only TypeScript workspace package; runs through tsx and does not build to dist.",
   "type": "module",
   "main": "src/index.ts",
+  "bin": {
+    "continuo-terminal-server": "src/bin.mjs",
+    "ct-server": "src/bin.mjs"
+  },
   "exports": {
     ".": {
       "types": "./src/index.ts",
@@ -26,10 +30,8 @@
     "@continuo-terminal/protocol": "file:../protocol",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "node-pty": "^1.1.0",
+    "tsx": "^4.22.3",
     "zod": "^3.25.0",
     "zod-to-json-schema": "^3.25.2"
-  },
-  "devDependencies": {
-    "tsx": "^4.22.3"
   }
 }

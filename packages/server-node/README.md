@@ -11,6 +11,32 @@ v0.1.0 surface.
   (or `tsx packages/server-node/src/server.ts`).
 - Test: `pnpm --filter @continuo-terminal/server-node test`.
 
+## Standalone CLI usage
+
+`continuo-terminal-server` is the canonical executable for starting the
+stdio MCP server. `ct-server` is a short local alias; prefer the canonical
+name in scripts and documentation to avoid PATH shadowing.
+
+Inside this workspace:
+
+```sh
+pnpm exec continuo-terminal-server
+```
+
+Future post-publish usage:
+
+```sh
+npx continuo-terminal-server
+```
+
+Options:
+
+- `--help` / `-h` prints command help.
+- `--version` / `-v` prints the package version.
+
+The CLI currently serves MCP over stdio only. HTTP transport is reserved
+for the M3 transport roadmap.
+
 ## Tools (7 MCP)
 
 These descriptions mirror the `TOOL_DESCRIPTIONS` table in `src/server.ts`

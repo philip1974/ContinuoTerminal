@@ -60,6 +60,10 @@ next bump.
 
 ### Added
 
+- **Standalone CLI bin entry** for the source-only stdio MCP server.
+  `continuo-terminal-server` is the canonical command and `ct-server` is
+  a short alias; the executable uses a small Node ESM wrapper that resolves
+  the package-local `tsx/esm` runtime before importing `src/server.ts`.
 - **`SessionState.origin` + `agentLabel` round-trip** (round-5 P2).
   `create_session(input.agentLabel)` now stamps the session as
   `origin: 'agent'` (else `'user'`) and `list_sessions` returns both

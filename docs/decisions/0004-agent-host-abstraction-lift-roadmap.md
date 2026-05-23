@@ -79,6 +79,17 @@ User 战略目标要求把整个 "agent-controls-agent via terminal" 模式产�
 
 **本 ADR 的最终路径决策**:先走 **M1 + M5(docs + bin + example)**,验证后再决断 M2/M3/M4 顺序。
 
+M1 final implementation note:the source-only bin uses a pure Node ESM
+`src/bin.mjs` wrapper with `createRequire(import.meta.url).resolve('tsx/esm')`
+and dynamic import of `src/server.ts`. This was verified from an external
+cwd so loader resolution is anchored to `@continuo-terminal/server-node`,
+not the caller's working directory.
+
+Before promoting `@continuo-terminal/host` or publishing server-node,
+require at least 2 non-Electron consumers merged and exercised for either
+2+ weeks or 3+ meaningful commits each. This sharpens the consumer gate so
+host APIs are not designed from a single application shape.
+
 ## Deliverable Template
 
 **HTTP transport 版**:
@@ -156,7 +167,7 @@ spawn('claude', [], {
 
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
-| M1 server-node-bin | **starting next**(dev-loop topic 22)| — | — |
+| M1 server-node-bin | **done** | topic 22 | TBD after Op9 commit |
 | M2 host-minimal | not started(可能跳到 M5 先做)| — | — |
 | M3 streamable-http | not started | — | — |
 | M4 continuo-adopt-host | not started | — | — |

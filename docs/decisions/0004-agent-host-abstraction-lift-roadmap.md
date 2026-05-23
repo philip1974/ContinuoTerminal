@@ -106,6 +106,17 @@ for bootstrap/lifecycle/env composition only. `MCP_TOKEN` remains a
 placeholder, not authentication; auth, policy callbacks, and real token
 validation are still pending and the D3 publish gate still applies.
 
+M4 ships as downscoped adapter-only adoption per red-team-v1 codex advisory
+PROCEED-WITH-DOWNSCOPE:Continuo `continuo-terminal-host-adapter.ts` bridges
+generic subject/env terms to the legacy `CONTINUO_*` contract with an inline
+type mirror. Physical `@continuo-terminal/host` dependency is deferred to
+future M4b because pnpm cannot resolve the package's internal `workspace:*`
+dependencies from Continuo's outside-workspace file-dep view. Continuo
+`createMcpHost` 618 LOC remains unchanged. **ADR 0004 phase implementation
+complete (M1-M5 all done);D3 publish gate still closed** (M5 = 1
+non-Electron consumer;Continuo via adapter is not a non-Electron consumer).
+Publish unlock + auth hardening are deferred to future ADR 0005.
+
 ## Deliverable Template
 
 **HTTP transport 版**:
@@ -186,7 +197,7 @@ spawn('claude', [], {
 | M1 server-node-bin | **done** | topic 22 | `1a1b592` (2026-05-23) |
 | M2 host-minimal | **done** | topic 25 | `ad358cb` (2026-05-23, additive server-node export + @experimental) |
 | M3 streamable-http | **done** | topic 24 | `54caea4` (2026-05-23, per-request fresh + shared SessionManager) |
-| M4 continuo-adopt-host | not started | — | — |
+| M4 continuo-adopt-host | **done** | topic 26 | `b809b76` (2026-05-23, downscope adapter-only) |
 | M5 real-demo | **done** | topic 23 | `18476b8` (2026-05-23, Option C launcher-only) |
 
 ADR will be updated to reflect each mini-topic's commit hash + verdict as they complete.

@@ -128,7 +128,7 @@ const proxy = await connectLocalSocketStdioProxy({
 
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
-| CT-B1 local-socket-transport | **done** | topic 33 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, local Unix socket NDJSON transport, SDK client transport, injectable stdio proxy, private-dir capability guard) |
+| CT-B1 local-socket-transport | **done** | topic 33 | bfcd13d (2026-05-23, local Unix socket NDJSON transport, SDK client transport, injectable stdio proxy, private-dir capability guard) |
 | CT-B2 tauri-sidecar-example | not started | — | — |
 | CT-B3 continuo-socket-adapter | not started | — | — |
 | CT-B4 plugin-bridge-compat-audit | not started | — | — |

@@ -24,8 +24,12 @@ export function defaultAuthenticate(tokens: TokenStore): AuthenticateRequest {
     if (!match) {
       return null;
     }
+    const plain = match[1];
+    if (!plain) {
+      return null;
+    }
 
-    const token = tokens.validate(match[1]);
+    const token = tokens.validate(plain);
     if (!token) {
       return null;
     }
@@ -40,4 +44,3 @@ export function defaultAuthenticate(tokens: TokenStore): AuthenticateRequest {
     return auth;
   };
 }
-

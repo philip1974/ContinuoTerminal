@@ -129,7 +129,7 @@ const proxy = await connectLocalSocketStdioProxy({
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
 | CT-B1 local-socket-transport | **done** | topic 33 | bfcd13d (2026-05-23, local Unix socket NDJSON transport, SDK client transport, injectable stdio proxy, private-dir capability guard) |
-| CT-B2 tauri-sidecar-example | not started | — | — |
+| CT-B2 tauri-sidecar-example | **done** | topic 34 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, Rust binary sidecar demo: spawn continuo-terminal-server HTTP + reqwest MCP client + idempotent cleanup; Tauri 2 plugin-shell integration guide) |
 | CT-B3 continuo-socket-adapter | **done** | topic 35 | 4dbfbfb (Continuo) + this ADR backfill (2026-05-23, Continuo adopts CT-B1 framing/safety primitives; copy-config UX byte-compatible; packages/source zero-touch except host strictness fix 01cf467) |
 | CT-B4 plugin-bridge-compat-audit | not started | — | — |
 | CT-B5 mcp-host-retirement-eval | not started | — | — |
@@ -148,6 +148,22 @@ the parent directory must be private (`0700`), the socket is chmodded `0600`,
 and stale path cleanup only unlinks existing socket nodes. A2/A3 hooks remain
 optional, but `authorizeToolCall` requires `authenticateRequest` to avoid a
 silent-bypass configuration. Windows named-pipe support remains a follow-up.
+
+### CT-B2 ship note
+
+CT-B2 ships `examples/tauri-sidecar/`, an independent Cargo binary that
+validates the Rust sidecar consumption path: it spawns `continuo-terminal-server`
+in HTTP mode, parses the dynamic `/mcp` endpoint from stdout, and drives MCP
+with `reqwest` raw JSON-RPC POST requests. The client sets both required
+Streamable HTTP headers (`Content-Type: application/json` and
+`Accept: application/json, text/event-stream`) per the SDK transport
+requirement. Cleanup is idempotent through a shared `Arc<Mutex<Option<Sidecar>>>`
+used by normal completion, panic hook, and Ctrl-C handling. Scope is reduced:
+this is not a full webview app or production packaging recipe. The README
+documents the Tauri 2 integration path using `tauri-plugin-shell`,
+`bundle.externalBin`, and shell capabilities, validating ADR 0006 invariant 2
+for a Rust desktop sidecar consumer while leaving `continuo-terminal-server`
+and server-node HTTP transport unchanged.
 
 ### CT-B3 ship note
 

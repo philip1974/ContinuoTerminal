@@ -70,7 +70,7 @@ Topic 21(Step 3a)实操中发现:**Step 3 内容大部分已被 Step 1/2 baselin
 | **C2** | ~~Continuo `terminal-sessions.service.ts` lifecycle state machine JSDoc promote(red-team-v1 P1-2 insight)~~ | ~~low~~ | **DONE** Continuo commit `f467907` |
 | **C3** | renderer `useTerminal.ts` attach 改走 server-node MCP channel(future external IDE / standalone CLI 嵌入铺路)| high if external embedding pursued | architectural |
 | **C4** | `terminal-window-isolation` 机制 evaluate — Continuo internal vs server-node abstraction(目前 Continuo internal 工作良好,无 immediate need)| nice-to-have | design review |
-| **C5** | Manual GUI attestation 历史 topics(Topic 18 6 scenarios + Topic 20 3 scenarios)— user 实操 closure | low(议题 H.7.3 manual_checkpoint 合规 deferred)| QA |
+| **C5** | ~~Manual GUI attestation 历史 topics(Topic 18 6 scenarios + Topic 20 3 scenarios)~~ | ~~low~~ | **DONE** Topic 18 PASS-6/6 (2026-05-22 user 实操) + Topic 20 PASS-3/3 (2026-05-23 user 实操,S3 by-BDD-equivalent);F1 paste-stuck follow-up observed,unrelated to migration scope |
 | **C6** | Step 2 plan-v4 Op20 typecheck gate ordering issue 反映在 future plan templates 上 — gate 位置规约(已 in ADR 0002)| done | meta |
 
 ### Cross-repo invariants 总结

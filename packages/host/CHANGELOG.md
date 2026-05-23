@@ -19,6 +19,12 @@ file.
 
 ### Added
 
+- A5 publish-readiness metadata: generic package description, keywords,
+  author, MIT license field, repository/homepage/bugs metadata,
+  `publishConfig.access: public`, package `files` allow-list, and a
+  verbatim package-local `LICENSE` file. `private:true` remains in place;
+  the internal `file:../server-node` dependency still needs ADR 0006
+  conversion before actual npm publish.
 - `BootstrapAuthOptions` on `bootstrapAgentHost({ auth })` for HTTP request
   enforcement. Request enforcement is enabled only when `auth` is provided;
   `auth` undefined preserves the M3 unauthenticated local HTTP path.

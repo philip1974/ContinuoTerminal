@@ -2,7 +2,28 @@
   "name": "@continuo-terminal/host",
   "private": true,
   "version": "0.0.0",
-  "description": "Experimental host bootstrap and agent environment helpers for Continuo Terminal.",
+  "description": "Experimental host bootstrap and agent environment helpers for MCP-based agent control over terminal sessions.",
+  "keywords": [
+    "mcp",
+    "agent",
+    "agent-host",
+    "terminal",
+    "bootstrap",
+    "ai-agent",
+    "typescript",
+    "library"
+  ],
+  "author": "Philip Lu (philip1974)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philip1974/ContinuoTerminal.git",
+    "directory": "packages/host"
+  },
+  "homepage": "https://github.com/philip1974/ContinuoTerminal/tree/main/packages/host",
+  "bugs": {
+    "url": "https://github.com/philip1974/ContinuoTerminal/issues"
+  },
   "type": "module",
   "main": "src/index.ts",
   "exports": {
@@ -10,6 +31,15 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "test": "vitest run __tests__/"

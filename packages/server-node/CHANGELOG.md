@@ -60,6 +60,12 @@ next bump.
 
 ### Added
 
+- A5 publish-readiness metadata: generic package description, keywords,
+  author, MIT license field, repository/homepage/bugs metadata,
+  `publishConfig.access: public`, package `files` allow-list, and a
+  verbatim package-local `LICENSE` file. `private:true` remains in place;
+  the internal `file:../protocol` dependency still needs ADR 0006
+  conversion before actual npm publish.
 - **2-layer auth policy hook shape** (A2 of ADR 0005):
   - `authenticateRequest` on `startHttpTransport({ ... })` — HTTP-layer
     authenticate.

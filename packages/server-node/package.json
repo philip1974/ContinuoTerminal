@@ -2,7 +2,28 @@
   "name": "@continuo-terminal/server-node",
   "private": true,
   "version": "0.1.0",
-  "description": "Standalone Node.js stdio MCP server for Continuo Terminal tools. Source-only TypeScript workspace package; runs through tsx and does not build to dist.",
+  "description": "Standalone Node.js MCP server exposing terminal/PTY tools. Source-only TypeScript package; runs through tsx and does not build to dist.",
+  "keywords": [
+    "mcp",
+    "terminal",
+    "pty",
+    "node-pty",
+    "stdio",
+    "http",
+    "agent",
+    "typescript"
+  ],
+  "author": "Philip Lu (philip1974)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philip1974/ContinuoTerminal.git",
+    "directory": "packages/server-node"
+  },
+  "homepage": "https://github.com/philip1974/ContinuoTerminal/tree/main/packages/server-node",
+  "bugs": {
+    "url": "https://github.com/philip1974/ContinuoTerminal/issues"
+  },
   "type": "module",
   "main": "src/index.ts",
   "bin": {
@@ -17,8 +38,13 @@
   },
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start": "tsx src/server.ts",
     "test": "vitest run __tests__/"

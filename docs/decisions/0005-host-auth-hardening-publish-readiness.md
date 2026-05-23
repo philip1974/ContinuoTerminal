@@ -166,6 +166,15 @@ authorization policy checks generic `scope === 'demo'`; the BDD asserts
 lifecycle markers and log discipline without printing token material. This
 is a consumer exercise, not a commitment to a future CLI package.
 
+A5 completes publish-readiness audit and codification, not publication.
+`@continuo-terminal/host` and `@continuo-terminal/server-node` now carry
+generic npm metadata, package-local MIT `LICENSE` files, package-specific
+repository/homepage metadata, `publishConfig.access: public`, and strict
+`files` allow-lists covering source, README, changelog, license, and
+package metadata only. `npm pack --dry-run` is clean for both packages.
+`private:true` remains set, internal `file:` dependency specs remain an ADR
+0006 blocker, and publish remains explicitly deferred.
+
 ## Deliverable Template(post-ADR 0005)
 
 ```typescript
@@ -220,6 +229,35 @@ spawn('agent-binary', [], { env: { ...process.env, ...env } });
 6. **Breaking changes after `private:false`**:current API is `@experimental` — A4 consumer exercise 必须 prove stable before A5/ADR 0006
 7. **False security**:localhost + bearer is better than placeholder,**but not a remote-production security story**(TLS + multi-tenant + scope policy 才完整)— A1-A3 仍 ship **localhost-first invariant**(S8 ADR 0004 carry forward)
 
+## A5 publish-readiness snapshot(2026-05-23)
+
+| Gate item | Status | Notes |
+|---|---|---|
+| Auth hardening A1-A3 | ✓ done | Opaque bearer token authority, server policy hooks, and host auth integration shipped. |
+| 2nd non-Electron consumer | ✓ done | A4 `examples/standalone-cli-host` exercises HTTP + A3 auth through `@continuo-terminal/host`. |
+| Package metadata complete | ✓ done | Host and server-node have generic descriptions, keywords, author, MIT license, repository, homepage, bugs, and `publishConfig.access`. |
+| Package LICENSE files | ✓ done | Package-local MIT `LICENSE` files are verbatim copies of root `LICENSE`. |
+| Pack dry-run clean | ✓ done | `npm pack --dry-run` excludes tests, tsconfig, `.claude`, `node_modules`, and examples for both candidate packages. |
+| M5 consumer exercise gate | ✗ not met | M5 has one meaningful commit; ADR 0006 needs 3+ meaningful commits or 2-week burn-in. |
+| A4 consumer exercise gate | ✗ not met | A4 has one meaningful commit; ADR 0006 needs 3+ meaningful commits or 2-week burn-in. |
+| `private:true` removal | ⏸ ADR 0006 | A5 intentionally retains `private:true`; publish requires explicit user decision. |
+| Versioning plan | ⏸ ADR 0006 | Host remains `0.0.0`, server-node remains `0.1.0`; release versioning is not decided here. |
+| Internal dependency specs | ⏸ ADR 0006 | `host -> server-node file:../server-node` and `server-node -> protocol file:../protocol` are not final public npm dependency specs. |
+| Source-only TS consumer model | ⏸ ADR 0006 | Source-only TypeScript + `tsx` runtime remains acceptable for private candidates; public consumer compatibility must be reviewed before publish. |
+| TLS / remote-production story | ⏸ future ADR | ADR 0005 remains localhost-first; TLS and multi-host signing are deferred to ADR 0007 or a later production-hardening ADR. |
+
+ADR 0006 publish unlock conditions:
+1. M5 reaches 3+ meaningful commits or 2-week exercised burn-in.
+2. A4 reaches 3+ meaningful commits or 2-week exercised burn-in.
+3. Internal `file:` dependency specs are converted to publishable release
+   ranges or an equivalent npm workspace release model.
+4. Source-only TypeScript + `tsx` runtime is explicitly accepted for public
+   consumers, or a build output strategy is added.
+5. `private:true` removal, version bump plan, changelog stamp, and publish
+   sequence are reviewed.
+6. User explicitly approves actual npm publish after a final `npm pack
+   --dry-run` / publish dry-run and no API churn remains.
+
 ## References
 
 - ADR 0001:Step 1 PTY handover + cross-repo invariants
@@ -236,6 +274,6 @@ spawn('agent-binary', [], { env: { ...process.env, ...env } });
 | A2 server-policy-hooks | **done** | topic 29 | 031509c (2026-05-23, 2-layer hooks: authenticate + authorize + MaybePromise + HTTP no-silent-bypass + oracle-leak guard) |
 | A3 host-auth-integration | **done** | topic 30 | de4546a (2026-05-23, host auth option wires TokenStore default authenticate + policy hook + stdio auth config guard) |
 | A4 second-consumer(standalone-cli-host)| **done** | topic 31 | 6024fff (2026-05-23, NEW examples/standalone-cli-host: HTTP + A3 auth real consumer; scope-check authorize policy; file: physical consumption) |
-| A5 publish-readiness | not started | — | — |
+| A5 publish-readiness | **done** | topic 32 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, metadata + LICENSE + files allow-list + clean npm pack dry-run + ADR 0006 blockers codified) |
 
 ADR will be updated to reflect each mini-topic's commit hash + verdict as they complete. Future **ADR 0006** will cover actual npm publish 若 gate 满足 + no API churn。Future **ADR 0007**(or merge with 0006)may cover TLS / production multi-host story if user demand arises.

@@ -274,6 +274,6 @@ ADR 0006 publish unlock conditions:
 | A2 server-policy-hooks | **done** | topic 29 | 031509c (2026-05-23, 2-layer hooks: authenticate + authorize + MaybePromise + HTTP no-silent-bypass + oracle-leak guard) |
 | A3 host-auth-integration | **done** | topic 30 | de4546a (2026-05-23, host auth option wires TokenStore default authenticate + policy hook + stdio auth config guard) |
 | A4 second-consumer(standalone-cli-host)| **done** | topic 31 | 6024fff (2026-05-23, NEW examples/standalone-cli-host: HTTP + A3 auth real consumer; scope-check authorize policy; file: physical consumption) |
-| A5 publish-readiness | **done** | topic 32 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, metadata + LICENSE + files allow-list + clean npm pack dry-run + ADR 0006 blockers codified) |
+| A5 publish-readiness | **done** | topic 32 | ed32cff (2026-05-23, metadata + LICENSE + files allow-list + clean npm pack dry-run + ADR 0006 blockers codified) |
 
 ADR will be updated to reflect each mini-topic's commit hash + verdict as they complete. Future **ADR 0006** will cover actual npm publish 若 gate 满足 + no API churn。Future **ADR 0007**(or merge with 0006)may cover TLS / production multi-host story if user demand arises.

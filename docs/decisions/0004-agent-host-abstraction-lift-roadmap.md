@@ -117,6 +117,12 @@ complete (M1-M5 all done);D3 publish gate still closed** (M5 = 1
 non-Electron consumer;Continuo via adapter is not a non-Electron consumer).
 Publish unlock + auth hardening are deferred to future ADR 0005.
 
+M4b (ContinuoTerminal `<m4b-ct-hash>` + Continuo `<m4b-continuo-hash>`)
+lands the physical dep:packages/host switched its server-node dep from
+`workspace:*` to `file:../server-node` (matching server-node to protocol
+pattern), and Continuo now imports `AgentEnv` from `@continuo-terminal/host`
+directly. The strict adapter pattern still applies.
+
 ## Deliverable Template
 
 **HTTP transport 版**:

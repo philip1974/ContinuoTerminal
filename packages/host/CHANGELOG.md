@@ -5,6 +5,12 @@ file.
 
 ## [Unreleased]
 
+### Changed
+
+- Resolve `@continuo-terminal/server-node` through `file:../server-node`
+  instead of `workspace:*` so outside-workspace `file:` consumers can install
+  `@continuo-terminal/host`.
+
 ### Added
 
 - Initial experimental `bootstrapAgentHost` facade with `stdio-child` and

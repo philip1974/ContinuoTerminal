@@ -96,7 +96,7 @@ importers:
   packages/host:
     dependencies:
       '@continuo-terminal/server-node':
-        specifier: workspace:*
+        specifier: file:../server-node
         version: link:../server-node
       '@modelcontextprotocol/sdk':
         specifier: ^1.29.0

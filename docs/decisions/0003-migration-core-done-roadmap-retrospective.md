@@ -66,8 +66,8 @@ Topic 21(Step 3a)实操中发现:**Step 3 内容大部分已被 Step 1/2 baselin
 
 | ID | Concern | Priority | Type |
 |---|---|---|---|
-| **C1** | Continuo `package.json` direct dep `node-pty` 删(transitively via server-node)| low | mechanical cleanup |
-| **C2** | Continuo `terminal-sessions.service.ts` lifecycle state machine JSDoc promote(red-team-v1 P1-2 insight)| low | documentation |
+| ~~**C1**~~ | ~~Continuo `package.json` direct dep `node-pty` 删(transitively via server-node)~~ | ~~low~~ | **DEFERRED** — `vi.mock('node-pty')` in `ansi-strip-regression.spec.ts:6` 依赖 direct dep path 解析;删 dep 后 spec 6/6 FAIL;需独立 vi.mock path migration topic |
+| **C2** | ~~Continuo `terminal-sessions.service.ts` lifecycle state machine JSDoc promote(red-team-v1 P1-2 insight)~~ | ~~low~~ | **DONE** Continuo commit `f467907` |
 | **C3** | renderer `useTerminal.ts` attach 改走 server-node MCP channel(future external IDE / standalone CLI 嵌入铺路)| high if external embedding pursued | architectural |
 | **C4** | `terminal-window-isolation` 机制 evaluate — Continuo internal vs server-node abstraction(目前 Continuo internal 工作良好,无 immediate need)| nice-to-have | design review |
 | **C5** | Manual GUI attestation 历史 topics(Topic 18 6 scenarios + Topic 20 3 scenarios)— user 实操 closure | low(议题 H.7.3 manual_checkpoint 合规 deferred)| QA |

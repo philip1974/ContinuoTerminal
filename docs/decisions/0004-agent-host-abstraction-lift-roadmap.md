@@ -180,7 +180,7 @@ spawn('claude', [], {
 |---|---|---|---|
 | M1 server-node-bin | **done** | topic 22 | `1a1b592` (2026-05-23) |
 | M2 host-minimal | not started(可能跳到 M5 先做)| — | — |
-| M3 streamable-http | **done** | topic 24 | TBD after Op10 commit |
+| M3 streamable-http | **done** | topic 24 | `54caea4` (2026-05-23, per-request fresh + shared SessionManager) |
 | M4 continuo-adopt-host | not started | — | — |
 | M5 real-demo | **done** | topic 23 | `18476b8` (2026-05-23, Option C launcher-only) |
 

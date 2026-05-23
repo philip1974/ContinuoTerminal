@@ -184,7 +184,7 @@ spawn('claude', [], {
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
 | M1 server-node-bin | **done** | topic 22 | `1a1b592` (2026-05-23) |
-| M2 host-minimal | **done** | topic 25 | TBD after Op12 commit |
+| M2 host-minimal | **done** | topic 25 | `ad358cb` (2026-05-23, additive server-node export + @experimental) |
 | M3 streamable-http | **done** | topic 24 | `54caea4` (2026-05-23, per-request fresh + shared SessionManager) |
 | M4 continuo-adopt-host | not started | — | — |
 | M5 real-demo | **done** | topic 23 | `18476b8` (2026-05-23, Option C launcher-only) |

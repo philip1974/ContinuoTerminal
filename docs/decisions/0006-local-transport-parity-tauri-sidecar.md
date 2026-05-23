@@ -131,10 +131,32 @@ const proxy = await connectLocalSocketStdioProxy({
 | CT-B1 local-socket-transport | **done** | topic 33 | bfcd13d (2026-05-23, local Unix socket NDJSON transport, SDK client transport, injectable stdio proxy, private-dir capability guard) |
 | CT-B2 tauri-sidecar-example | **done** | topic 34 | a36e6c8 (2026-05-23, Rust binary sidecar demo: spawn continuo-terminal-server HTTP + reqwest MCP client + idempotent cleanup; Tauri 2 plugin-shell integration guide) |
 | CT-B3 continuo-socket-adapter | **done** | topic 35 | 4dbfbfb (Continuo) + this ADR backfill (2026-05-23, Continuo adopts CT-B1 framing/safety primitives; copy-config UX byte-compatible; packages/source zero-touch except host strictness fix 01cf467) |
-| CT-B4 plugin-bridge-compat-audit | not started | — | — |
+| CT-B4 plugin-bridge-compat-audit | **done** | topic 36 | (audit-only, no code commits) 2026-05-23, finds Q1+Q2 gaps (dynamic tool register + tools/list_changed) but Q3+Q4 Electron-specific; recommends Option 3 (document parallel as intentional); codex AGREE | 
 | CT-B5 mcp-host-retirement-eval | not started | — | — |
 
 ADR 将随每 mini-topic ship 更新 commit hash + verdict。
+
+### CT-B4 ship note
+
+CT-B4 plugin-bridge-compat-audit ships as **audit-only**(no code changes per ADR 0006 description "可能不改代码")。Audit report:`.claude/dev-loop/36-ct-b4-plugin-bridge-compat-audit/audit-report.md`。Codex independent review verdict:**AGREE** with all 4 findings + Option 3 recommendation。
+
+**Findings**:
+- **Q1 Dynamic tool registration** — Continuo `plugin-mcp-bridge.service.ts` needs `host.registerTool / removeTool / tools` API;ContinuoTerminal `createTerminalMcpServer` handlers Map is construction-time hardcoded(7 tools)。**Gap: YES**(but not blocking any current consumer)
+- **Q2 tools/list_changed** — SDK 自带 `server.sendToolListChanged()` primitive;Continuo wires it via `startPluginMcpIpc()` + `host.broadcast`;ContinuoTerminal server-node 没 wire to mid-session mutation。**Gap: YES**(coupled with Q1)
+- **Q3 Plugin invoke IPC** — Continuo `createInvokeRemote` 通过 webContents IPC to renderer。**Electron-specific,Continuo unique** per ADR 0006 §3 invariant
+- **Q4 wcId tracking + abortByWebContents** — Electron lifecycle logic(`webContents.id` owner concept)。**Electron-specific**
+
+**CT-B5 recommendation**(Option 3 — Document parallel as intentional):
+- Continuo `mcp-host.service`(618 LOC)keeps own dynamic-tool API + plugin bridge as-is
+- ContinuoTerminal `server-node` stays static-tool(7 terminal tools)
+- **No code changes** in CT-B5;documented decision is the deliverable
+- Future ADR(if AiQ / X project needs dynamic tools):extend `createTerminalMcpServer` with `host.registerTool/removeTool` + `sendToolListChanged` wire(~30 LOC est)— but **defer until concrete consumer demand**
+
+**Why not other options**:
+- Option 1(migrate plugin-mcp-bridge to ContinuoTerminal):rejects per ADR 0006 §3 + S7 — forcing Electron-flavored API into generic primitives
+- Option 2(extend ContinuoTerminal with generic dynamic tool API now):defer — no current consumer demand;adding API surface preemptively risks future churn
+
+Audit verifies Continuo bridge architecture is sound for its product context;parallel implementation acceptable outcome per ADR 0006 §5 "CT-B5 可能输出 '不退役'决定"。
 
 ### CT-B1 ship note
 

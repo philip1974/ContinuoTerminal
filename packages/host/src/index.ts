@@ -1,8 +1,13 @@
 export { bootstrapAgentHost } from './bootstrap.js';
-export { HostDisposedError, TokenInvalidError } from './errors.js';
+export { HostAuthConfigError, HostDisposedError, TokenInvalidError } from './errors.js';
 export type {
   AgentEnv,
   AgentHost,
+  AuthContext,
+  AuthenticateRequest,
+  AuthorizationDecision,
+  AuthorizeToolCall,
+  BootstrapAuthOptions,
   BootstrapOptions,
   CreateAgentEnvInput,
   HttpTransportOption,

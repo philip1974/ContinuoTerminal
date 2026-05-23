@@ -19,6 +19,14 @@ file.
 
 ### Added
 
+- `BootstrapAuthOptions` on `bootstrapAgentHost({ auth })` for HTTP request
+  enforcement. Request enforcement is enabled only when `auth` is provided;
+  `auth` undefined preserves the M3 unauthenticated local HTTP path.
+- Default HTTP bearer authentication that validates host-issued `MCP_TOKEN`
+  values through `TokenStore.validate`, plus optional `authorizeToolCall`
+  policy wiring.
+- `HostAuthConfigError` exported for invalid host auth configuration such as
+  `stdio-child` plus `auth`.
 - `Token` / `IssueInput` / `IssueResult` types exported.
 - `TokenStore.revokeById(id)` / `.revokeBySubject(subject)` / `.size()`.
 - `ttlMs: number | null` support on issue (`null` = no expiry for controlled

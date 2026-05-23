@@ -1,3 +1,5 @@
+import type { BootstrapAuthOptions } from './auth.js';
+
 export type TransportKind = 'stdio-child' | 'http';
 
 export type StdioChildTransportOption = {
@@ -13,6 +15,7 @@ export type HttpTransportOption = {
 
 export type BootstrapOptions = {
   transport: StdioChildTransportOption | HttpTransportOption;
+  auth?: BootstrapAuthOptions;
 };
 
 export type TransportInfo =
@@ -41,3 +44,10 @@ export interface AgentHost {
 }
 
 export type { IssueInput, IssueResult, Token } from './token.js';
+export type { BootstrapAuthOptions } from './auth.js';
+export type {
+  AuthContext,
+  AuthenticateRequest,
+  AuthorizationDecision,
+  AuthorizeToolCall,
+} from '@continuo-terminal/server-node';

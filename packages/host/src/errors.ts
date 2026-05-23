@@ -5,6 +5,13 @@ export class HostDisposedError extends Error {
   }
 }
 
+export class HostAuthConfigError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'HostAuthConfigError';
+  }
+}
+
 export class TokenInvalidError extends Error {
   constructor() {
     super('Token is not valid for this host');

@@ -147,6 +147,16 @@ server-node remains independent of `@continuo-terminal/host` (S3).
 Next:A3 host-auth-integration wires `bootstrapAgentHost.auth` options into
 these hooks.
 
+A3 ships host-side auth integration wiring A1 token authority into A2
+server-node hooks through `bootstrapAgentHost({ auth })`. HTTP hosts opt in
+to request enforcement; `auth` undefined preserves the M3 unauthenticated
+local HTTP path. `defaultAuthenticate` parses strict bearer headers,
+validates through `TokenStore.validate`, and maps token metadata to generic
+`AuthContext`. `authenticateRequestOverride` is an advanced escape hatch
+that replaces default validation. `stdio-child` plus `auth` fails fast with
+`HostAuthConfigError` because that transport keeps the parent-process trust
+boundary. TLS and multi-host signing remain future ADR scope.
+
 ## Deliverable Template(post-ADR 0005)
 
 ```typescript
@@ -215,7 +225,7 @@ spawn('agent-binary', [], { env: { ...process.env, ...env } });
 |---|---|---|---|
 | A1 token-authority | **done** | topic 28 | 99c8e3d (2026-05-23, opaque bearer + SHA-256 + timingSafeEqual + active prune + ttlMs nullable + revocation) |
 | A2 server-policy-hooks | **done** | topic 29 | 031509c (2026-05-23, 2-layer hooks: authenticate + authorize + MaybePromise + HTTP no-silent-bypass + oracle-leak guard) |
-| A3 host-auth-integration | not started | — | — |
+| A3 host-auth-integration | **done** | topic 30 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, host auth option wires TokenStore default authenticate + policy hook + stdio auth config guard) |
 | A4 second-consumer(standalone-cli-host)| not started | — | — |
 | A5 publish-readiness | not started | — | — |
 

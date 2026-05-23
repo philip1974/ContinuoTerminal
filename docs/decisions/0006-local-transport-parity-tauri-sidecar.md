@@ -64,7 +64,7 @@ codex 独立 audit **三个关键纠正**:
 |---|---|---|---|
 | **CT-B1** | `local-socket-transport` | ContinuoTerminal 加 generic local socket(unix socket / named-pipe)NDJSON MCP server transport;file-perm capability 鉴权 default;可选 A2/A3 hooks 复用 | 3-5 days |
 | **CT-B2** | `tauri-sidecar-example` | NEW `examples/tauri-sidecar/`(Rust + minimal Tauri 壳)spawn `continuo-terminal-server` HTTP sidecar,Rust 用 reqwest 走 MCP HTTP client;验证 AiQ 路径 A 可行 | 5-7 days |
-| **CT-B3** | `continuo-socket-adapter` | Continuo `mcp-stdio-server.service.ts` swap 内部 transport 实现为 CT-B1 primitive,**保 "复制 MCP 配置" UX byte-compatible**;不动 mcp-host.service / agent-auth | 3-5 days |
+| **CT-B3** | `continuo-socket-adapter` | Continuo `mcp-stdio-server.service.ts` adopts CT-B1 framing + socket-safety primitives while keeping its own `_continuo/hello`, dispatch, and **"复制 MCP 配置" UX byte-compatible**;不动 mcp-host.service / agent-auth | 3-5 days |
 | **CT-B4** | `plugin-bridge-compat-audit` | Evaluate `plugin-mcp-bridge.service.ts` 动态 tool 注册 + `tools/list_changed` 在 ContinuoTerminal primitives 下兼容性;**仅 audit,可能不改代码** | 2-3 days |
 | **CT-B5** | `mcp-host-retirement-eval` | After B1-B4,决定 `mcp-host.service.ts`(618 LOC)哪些可退役;若 ROI 不够,documented decision 保留 parallel implementation | 3-5 days |
 
@@ -130,7 +130,7 @@ const proxy = await connectLocalSocketStdioProxy({
 |---|---|---|---|
 | CT-B1 local-socket-transport | **done** | topic 33 | bfcd13d (2026-05-23, local Unix socket NDJSON transport, SDK client transport, injectable stdio proxy, private-dir capability guard) |
 | CT-B2 tauri-sidecar-example | not started | — | — |
-| CT-B3 continuo-socket-adapter | not started | — | — |
+| CT-B3 continuo-socket-adapter | **done** | topic 35 | 4dbfbfb (Continuo) + this ADR backfill (2026-05-23, Continuo adopts CT-B1 framing/safety primitives; copy-config UX byte-compatible; packages/source zero-touch except host strictness fix 01cf467) |
 | CT-B4 plugin-bridge-compat-audit | not started | — | — |
 | CT-B5 mcp-host-retirement-eval | not started | — | — |
 
@@ -148,3 +148,24 @@ the parent directory must be private (`0700`), the socket is chmodded `0600`,
 and stale path cleanup only unlinks existing socket nodes. A2/A3 hooks remain
 optional, but `authorizeToolCall` requires `authenticateRequest` to avoid a
 silent-bypass configuration. Windows named-pipe support remains a follow-up.
+
+### CT-B3 ship note
+
+CT-B3 deliberately does **not** replace Continuo's stdio socket listener with
+`startLocalSocketTransport`. Continuo must intercept the private
+`_continuo/hello` notification before generic MCP notification discard so it
+can bind a socket connection to a window-scoped context; CT-B1's listener
+hands the first message directly to an SDK MCP server and cannot preserve
+that Continuo-specific handshake. Instead, Continuo adopts the reusable CT-B1
+framing and socket-safety primitives while keeping its own dispatch,
+`_continuo/hello`, `socketCtx`, and "copy MCP config" UX intact. CT-B3 also
+switches Continuo framing to SDK stdio CRLF parity: a trailing `\r` before
+`\n` is stripped. The old CR-retention behavior was an accidental legacy
+detail, not a feature contract. ContinuoTerminal packages/source are
+zero-touch for the adapter itself; this ADR update is doc-only. CT-B3 scope
+expanded by one defensive source fix: ContinuoTerminal
+`packages/host/src/auth.ts` now guards the `BEARER_RE.exec(...)[1]` capture
+before passing it to `TokenStore.validate`, making the host package safe under
+downstream `noUncheckedIndexedAccess` typechecking. The behavior is equivalent
+because the regex capture is non-empty when matched; future file: consumers
+benefit from the stricter type compatibility.

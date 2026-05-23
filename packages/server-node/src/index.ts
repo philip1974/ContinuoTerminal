@@ -9,6 +9,14 @@ export { makeSendTextHandler } from './handlers/send-text.js';
 export { createTerminalMcpServer, main } from './server.js';
 export { SessionManager } from './session-manager.js';
 export { startHttpTransport } from './transports/http.js';
+export {
+  MAX_UNIX_SOCKET_PATH_LENGTH,
+  ServerSocketTransport,
+  splitLines,
+  startLocalSocketTransport,
+} from './transports/local-socket.js';
+export { LocalSocketClientTransport } from './transports/local-socket-client.js';
+export { connectLocalSocketStdioProxy } from './transports/local-socket-proxy.js';
 export type {
   AuthContext,
   AuthenticateRequest,
@@ -20,3 +28,12 @@ export type {
   StartHttpTransportInput as HttpTransportOptions,
   StartedHttpTransport as HttpTransportHandle,
 } from './transports/http.js';
+export type {
+  SplitLinesResult,
+  StartLocalSocketTransportInput as LocalSocketTransportOptions,
+  StartedLocalSocketTransport as LocalSocketTransportHandle,
+} from './transports/local-socket.js';
+export type {
+  ConnectLocalSocketStdioProxyInput,
+  LocalSocketStdioProxy,
+} from './transports/local-socket-proxy.js';

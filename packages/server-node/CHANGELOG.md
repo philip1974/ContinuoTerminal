@@ -60,6 +60,15 @@ next bump.
 
 ### Added
 
+- **Local socket NDJSON transport** (CT-B1 of ADR 0006):
+  - `startLocalSocketTransport({ socketPath, sessions, authenticateRequest?, authorizeToolCall? })`
+    starts a macOS/Linux Unix socket MCP listener.
+  - `LocalSocketClientTransport` provides an SDK `Transport` client for
+    tests and local consumers.
+  - `connectLocalSocketStdioProxy({ socketPath, stdin?, stdout? })`
+    bridges stdio to the socket; streams are injectable for tests.
+  - `splitLines` and `MAX_UNIX_SOCKET_PATH_LENGTH` are exported for
+    follow-up local transport adapters.
 - A5 publish-readiness metadata: generic package description, keywords,
   author, MIT license field, repository/homepage/bugs metadata,
   `publishConfig.access: public`, package `files` allow-list, and a
@@ -135,6 +144,22 @@ next bump.
 
 - No-hook path retains M3 unauthenticated behavior exactly. Hooks are
   additive optional options.
+
+### Safety
+
+- Local socket startup enforces a private parent directory (`0700`) and
+  socket file mode (`0600`). Stale cleanup removes only existing socket
+  nodes and throws on non-socket paths.
+- Local socket `authorizeToolCall` requires `authenticateRequest`, matching
+  the HTTP silent-bypass guard.
+- The socket transport uses SDK `serializeMessage` / `deserializeMessage`
+  for stdio framing parity, honors backpressure, and closes only the
+  per-connection MCP server when a socket disconnects.
+
+### Platform
+
+- CT-B1 local socket support is macOS/Linux only. Windows named-pipe support
+  is deferred to a follow-up.
 
 ### Notes
 

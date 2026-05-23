@@ -128,10 +128,23 @@ const proxy = await connectLocalSocketStdioProxy({
 
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
-| CT-B1 local-socket-transport | not started | — | — |
+| CT-B1 local-socket-transport | **done** | topic 33 | <COMMIT_HASH_PLACEHOLDER> (2026-05-23, local Unix socket NDJSON transport, SDK client transport, injectable stdio proxy, private-dir capability guard) |
 | CT-B2 tauri-sidecar-example | not started | — | — |
 | CT-B3 continuo-socket-adapter | not started | — | — |
 | CT-B4 plugin-bridge-compat-audit | not started | — | — |
 | CT-B5 mcp-host-retirement-eval | not started | — | — |
 
 ADR 将随每 mini-topic ship 更新 commit hash + verdict。
+
+### CT-B1 ship note
+
+CT-B1 adds the first ADR 0006 transport primitive inside
+`@continuo-terminal/server-node`: a generic macOS/Linux Unix socket MCP
+listener using SDK stdio NDJSON framing, a matching SDK client transport,
+and an injectable stdio proxy for future local process bridges. The listener
+uses per-connection fresh MCP SDK servers with one shared `SessionManager`,
+matching the M3 HTTP multi-client invariant. Capability safety is explicit:
+the parent directory must be private (`0700`), the socket is chmodded `0600`,
+and stale path cleanup only unlinks existing socket nodes. A2/A3 hooks remain
+optional, but `authorizeToolCall` requires `authenticateRequest` to avoid a
+silent-bypass configuration. Windows named-pipe support remains a follow-up.

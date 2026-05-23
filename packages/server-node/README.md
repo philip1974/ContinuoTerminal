@@ -75,6 +75,49 @@ multiple local clients can observe and control the same PTY sessions.
 no auth, CORS, or policy layer. Keep the default `127.0.0.1` bind unless
 you are wrapping it with your own trusted local controls.
 
+### Local socket transport
+
+`startLocalSocketTransport` exposes the same MCP tools over a local Unix
+socket using NDJSON framing compatible with the SDK stdio serializer.
+
+```ts
+import {
+  LocalSocketClientTransport,
+  SessionManager,
+  startLocalSocketTransport,
+} from '@continuo-terminal/server-node';
+
+const sessions = new SessionManager();
+const server = await startLocalSocketTransport({
+  socketPath: '/private/tmp/my-app-mcp/sock',
+  sessions,
+});
+
+const transport = new LocalSocketClientTransport('/private/tmp/my-app-mcp/sock');
+```
+
+Capability rules:
+
+- The parent directory is created with mode `0700` and startup fails if an
+  existing parent is group/world accessible.
+- The socket file is chmodded to `0600` after listen.
+- Stale socket paths are removed only when `lstat().isSocket()` is true;
+  regular files, directories, and symlinks are never silently unlinked.
+- `authorizeToolCall` requires `authenticateRequest`, mirroring the HTTP
+  no-silent-bypass invariant.
+
+The transport creates one fresh MCP SDK server per socket connection while
+sharing the caller-provided `SessionManager`, so multiple local clients can
+observe the same terminal sessions.
+
+`connectLocalSocketStdioProxy({ socketPath, stdin?, stdout? })` bridges
+stdio to the socket. By default it consumes `process.stdin` and writes to
+`process.stdout`; pass explicit streams when embedding it inside tests or
+another process.
+
+Platform note: CT-B1 supports macOS/Linux Unix sockets. Windows named pipe
+support is planned as a follow-up.
+
 ## Auth policy hooks (A2)
 
 server-node accepts **2 optional hooks**:

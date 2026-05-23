@@ -60,6 +60,9 @@ next bump.
 
 ### Added
 
+- **Public `startHttpTransport` export** for package consumers that need
+  the M3 Streamable HTTP transport without deep-importing server-node
+  internals. Added for the M2 host package boundary.
 - **Streamable HTTP transport mode** for the standalone server bin.
   `continuo-terminal-server --transport http` binds to `127.0.0.1` by
   default, prints the local `/mcp` URL after listen, and uses per-request

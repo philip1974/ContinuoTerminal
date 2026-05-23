@@ -101,6 +101,11 @@ This supports multi-client same-server process workflows, but auth,
 policy, token validation, and host lifecycle APIs remain pending; M3 alone
 does not make the future `@continuo-terminal/host` API M2-ready.
 
+M2 ships `@continuo-terminal/host` as a private, experimental API candidate
+for bootstrap/lifecycle/env composition only. `MCP_TOKEN` remains a
+placeholder, not authentication; auth, policy callbacks, and real token
+validation are still pending and the D3 publish gate still applies.
+
 ## Deliverable Template
 
 **HTTP transport 版**:
@@ -179,7 +184,7 @@ spawn('claude', [], {
 | Mini-topic | Status | Topic ID | Commits |
 |---|---|---|---|
 | M1 server-node-bin | **done** | topic 22 | `1a1b592` (2026-05-23) |
-| M2 host-minimal | not started(可能跳到 M5 先做)| — | — |
+| M2 host-minimal | **done** | topic 25 | TBD after Op12 commit |
 | M3 streamable-http | **done** | topic 24 | `54caea4` (2026-05-23, per-request fresh + shared SessionManager) |
 | M4 continuo-adopt-host | not started | — | — |
 | M5 real-demo | **done** | topic 23 | `18476b8` (2026-05-23, Option C launcher-only) |

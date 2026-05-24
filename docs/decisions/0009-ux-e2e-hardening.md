@@ -1,6 +1,6 @@
 # ADR 0009 — UX e2e Hardening(Phase 3 of Proposal 0001)
 
-* **Status**: Accepted(scope locked 2026-05-24)
+* **Status**: BLOCKED on Continuo baseline e2e environmental issue(2026-05-24;executor attempt failed — entire Continuo `pnpm e2e` suite times out at `electron.launch` setup,既有 `terminal-panel.spec.ts` + `smoke.spec.ts` 全 broken pre-existing;P3 cannot ship F1 regression gate until Continuo baseline e2e infrastructure is fixed)
 * **Date**: 2026-05-24
 * **Supersedes**: nothing — first UX e2e ADR
 * **References**:
@@ -151,12 +151,12 @@ P3 全部完成的判定:
 
 | ID | Status | Commit | Outcome note |
 |---|---|---|---|
-| P3.1 ADR 0009 spec | Done | _this commit_ | Scope + invariants locked;3-target design + Strategy α |
-| P3.2 dl-req topic 43 | Pending | — | — |
-| P3.3 dl-plan v1 | Pending | — | — |
-| P3.4 Codex red-team | Pending | — | — |
-| P3.5 plan-v2 + execute | Pending | — | — |
-| P3.6 Verify | Pending | — | — |
+| P3.1 ADR 0009 spec | Done | `6ce63c9` | Scope + invariants locked;3-target design + Strategy α |
+| P3.2 dl-req topic 43 | Done | (`.claude/` gitignored) | autonomous_mode req with 3 AC + 5 Safeguards + 7 Norms + 6 Unknowns |
+| P3.3 dl-plan v1/v2/v3 | Done | (`.claude/` gitignored) | 3 plan rounds (Scenario A 自然 race → BLOCK → Scenario B deterministic hook → BLOCK → all P0+P1+P2 integrated final → REVISE→plan-v3) |
+| P3.4 Codex red-team v1/v2 | Done | (terminal session) | R1 BLOCK 4 P0+3 P1+4 P2(自然 race 不 deterministic,clipboard 不可靠,build 缺失,worktree destructive)→ R2 REVISE 0 P0+4 P1+4 P2 all operational |
+| P3.5 plan-v3 execute | **BLOCKED** | (rolled back) | **Continuo baseline e2e environmental issue**:全 Continuo `pnpm e2e` suite times out at `electron.launch` setup (verified existing `terminal-panel.spec.ts` + `smoke.spec.ts` 都 fail with my changes stashed);P3 spec设计正确但无法 verify;changes rolled back |
+| P3.6 Verify | **Pending follow-up** | — | Requires Continuo baseline e2e fix follow-up topic;then re-execute plan-v3 |
 
 ---
 

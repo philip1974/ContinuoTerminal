@@ -11,6 +11,7 @@ import {
   MCP_TOOL_LIST_SESSIONS,
   MCP_TOOL_PRESS_KEY,
   MCP_TOOL_READ_OUTPUT,
+  MCP_TOOL_RESIZE,
   MCP_TOOL_SEND_INPUT,
   MCP_TOOL_SEND_TEXT,
 } from '@continuo-terminal/protocol';
@@ -29,6 +30,7 @@ const expectedTools = [
   MCP_TOOL_PRESS_KEY,
   MCP_TOOL_READ_OUTPUT,
   MCP_TOOL_KILL,
+  MCP_TOOL_RESIZE,
 ];
 
 function getChildProcess(transport: StdioClientTransport | null): ChildProcess | undefined {
@@ -87,7 +89,7 @@ describe('server-node bin', { timeout: 60_000 }, () => {
     expect(result.stdout.trim()).toMatch(/^\d+\.\d+\.\d+$/);
   });
 
-  it('linked bin from external cwd initializes and lists the seven terminal tools', async () => {
+  it('linked bin from external cwd initializes and lists the eight terminal tools', async () => {
     transport = new StdioClientTransport({
       command: linkedBinPath,
       args: [],

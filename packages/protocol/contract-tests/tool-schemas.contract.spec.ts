@@ -5,6 +5,7 @@ import {
   MCP_TOOL_LIST_SESSIONS,
   MCP_TOOL_PRESS_KEY,
   MCP_TOOL_READ_OUTPUT,
+  MCP_TOOL_RESIZE,
   MCP_TOOL_SEND_INPUT,
   MCP_TOOL_SEND_TEXT,
   createSessionInputSchema,
@@ -14,6 +15,7 @@ import {
   pressKeyInputSchema,
   readOutputInputSchema,
   readOutputOutputSchema,
+  resizeInputSchema,
   sendInputInputSchema,
   sendTextInputSchema,
 } from '@continuo-terminal/protocol';
@@ -27,6 +29,7 @@ describe('protocol tool name constants — contract', () => {
     expect(MCP_TOOL_PRESS_KEY).toBe('terminal.press_key');
     expect(MCP_TOOL_READ_OUTPUT).toBe('terminal.read_output');
     expect(MCP_TOOL_KILL).toBe('terminal.kill');
+    expect(MCP_TOOL_RESIZE).toBe('terminal.resize');
   });
 });
 
@@ -102,5 +105,18 @@ describe('protocol I/O schemas roundtrip — contract', () => {
     expect(killInputSchema.safeParse({ session_id: 's' }).success).toBe(true);
     expect(killInputSchema.safeParse({ session_id: 's', signal: 'SIGINT' }).success).toBe(true);
     expect(killInputSchema.safeParse({ session_id: 's', signal: 'BOGUS' }).success).toBe(false);
+  });
+
+  it('resize requires session_id + cols + rows (topic 46 — P1.6 visual distortion fix)', () => {
+    expect(resizeInputSchema.safeParse({ session_id: 's', cols: 120, rows: 40 }).success).toBe(true);
+    expect(resizeInputSchema.safeParse({ session_id: 's', cols: 120 }).success).toBe(false);
+    expect(resizeInputSchema.safeParse({ session_id: 's', rows: 40 }).success).toBe(false);
+    expect(resizeInputSchema.safeParse({ cols: 120, rows: 40 }).success).toBe(false);
+  });
+
+  it('resize rejects non-positive cols/rows', () => {
+    expect(resizeInputSchema.safeParse({ session_id: 's', cols: 0, rows: 40 }).success).toBe(false);
+    expect(resizeInputSchema.safeParse({ session_id: 's', cols: 120, rows: -1 }).success).toBe(false);
+    expect(resizeInputSchema.safeParse({ session_id: 's', cols: 1.5, rows: 40 }).success).toBe(false);
   });
 });

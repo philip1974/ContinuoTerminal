@@ -94,7 +94,7 @@ describe('streamable HTTP transport', { timeout: 60_000 }, () => {
     expect(Number(url.port)).toBeGreaterThan(0);
   });
 
-  it('connects over Streamable HTTP and lists the seven terminal tools', async () => {
+  it('connects over Streamable HTTP and lists the eight terminal tools', async () => {
     const spawned = spawnBin(['--transport', 'http', '--port', '0']);
     children.push(spawned.child);
     const url = await waitForListen(spawned);
@@ -111,6 +111,7 @@ describe('streamable HTTP transport', { timeout: 60_000 }, () => {
       'terminal.press_key',
       'terminal.read_output',
       'terminal.kill',
+      'terminal.resize',
     ]);
   });
 
@@ -172,8 +173,8 @@ describe('streamable HTTP transport', { timeout: 60_000 }, () => {
     });
     const sessions = (listed.structuredContent as { sessions: Array<{ session_id: string }> }).sessions;
 
-    expect(toolsA.tools).toHaveLength(7);
-    expect(toolsB.tools).toHaveLength(7);
+    expect(toolsA.tools).toHaveLength(8);
+    expect(toolsB.tools).toHaveLength(8);
     expect(sessions.some((session) => session.session_id === sessionId)).toBe(true);
   });
 });

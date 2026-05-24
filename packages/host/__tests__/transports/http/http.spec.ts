@@ -29,7 +29,7 @@ describe('HTTP transport host integration', () => {
 
     const result = await client.listTools();
 
-    expect(result.tools).toHaveLength(7);
+    expect(result.tools).toHaveLength(8);
   });
 
   it('allows concurrent HTTP clients to share one host SessionManager', async () => {
@@ -49,8 +49,8 @@ describe('HTTP transport host integration', () => {
     const listed = await clientB.callTool({ name: 'terminal.list_sessions', arguments: {} });
     const sessions = (listed.structuredContent as { sessions: Array<{ session_id: string }> }).sessions;
 
-    expect(toolsA.tools).toHaveLength(7);
-    expect(toolsB.tools).toHaveLength(7);
+    expect(toolsA.tools).toHaveLength(8);
+    expect(toolsB.tools).toHaveLength(8);
     expect(sessions.some((session) => session.session_id === sessionId)).toBe(true);
   });
 });

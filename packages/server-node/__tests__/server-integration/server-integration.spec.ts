@@ -10,6 +10,7 @@ import {
   MCP_TOOL_LIST_SESSIONS,
   MCP_TOOL_PRESS_KEY,
   MCP_TOOL_READ_OUTPUT,
+  MCP_TOOL_RESIZE,
   MCP_TOOL_SEND_INPUT,
   MCP_TOOL_SEND_TEXT,
 } from '@continuo-terminal/protocol';
@@ -25,6 +26,7 @@ const expectedTools = [
   MCP_TOOL_PRESS_KEY,
   MCP_TOOL_READ_OUTPUT,
   MCP_TOOL_KILL,
+  MCP_TOOL_RESIZE,
 ];
 
 function getChildProcess(transport: StdioClientTransport | null): ChildProcess | undefined {
@@ -46,7 +48,7 @@ describe('server-integration', { timeout: 60_000 }, () => {
     transport = null;
   });
 
-  it('initialize + tools/list returns 7 terminal tools with JSON Schema and descriptions', async () => {
+  it('initialize + tools/list returns 8 terminal tools with JSON Schema and descriptions', async () => {
     transport = new StdioClientTransport({ command: 'tsx', args: [serverPath] });
     client = new Client({ name: 'test', version: '0' }, { capabilities: {} });
 

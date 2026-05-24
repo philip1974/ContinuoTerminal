@@ -94,14 +94,14 @@ describe('local socket transport', { timeout: 60_000 }, () => {
     expect(socketMode).toBe(0o600);
   });
 
-  it('connects an SDK client over local socket and lists the seven terminal tools', async () => {
+  it('connects an SDK client over local socket and lists the eight terminal tools', async () => {
     const { socketPath } = await start();
     const { client } = await connectClient(socketPath, 'local-socket-c2');
     clients.push(client);
 
     const result = await client.listTools();
 
-    expect(result.tools).toHaveLength(7);
+    expect(result.tools).toHaveLength(8);
   });
 
   it('shares one SessionManager across multiple socket clients', async () => {
@@ -264,7 +264,7 @@ describe('local socket transport', { timeout: 60_000 }, () => {
     clients.push(client);
     const result = await client.listTools();
 
-    expect(result.tools).toHaveLength(7);
+    expect(result.tools).toHaveLength(8);
   });
 
   it('throws when authorizeToolCall is configured without authenticateRequest', async () => {

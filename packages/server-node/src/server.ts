@@ -10,6 +10,7 @@ import {
   MCP_TOOL_LIST_SESSIONS,
   MCP_TOOL_PRESS_KEY,
   MCP_TOOL_READ_OUTPUT,
+  MCP_TOOL_RESIZE,
   MCP_TOOL_SEND_INPUT,
   MCP_TOOL_SEND_TEXT,
   createSessionInputSchema,
@@ -17,6 +18,7 @@ import {
   listSessionsInputSchema,
   pressKeyInputSchema,
   readOutputInputSchema,
+  resizeInputSchema,
   sendInputInputSchema,
   sendTextInputSchema,
 } from '@continuo-terminal/protocol';
@@ -27,6 +29,7 @@ import { makeKillHandler } from './handlers/kill.js';
 import { makeListSessionsHandler } from './handlers/list-sessions.js';
 import { makePressKeyHandler } from './handlers/press-key.js';
 import { makeReadOutputHandler } from './handlers/read-output.js';
+import { makeResizeHandler } from './handlers/resize.js';
 import { makeSendInputHandler } from './handlers/send-input.js';
 import { makeSendTextHandler } from './handlers/send-text.js';
 import { SessionManager } from './session-manager.js';
@@ -45,6 +48,7 @@ const TOOL_DESCRIPTIONS = {
   [MCP_TOOL_PRESS_KEY]: 'Press a special key (enter/tab/ctrl_c/arrows/...) in a session.',
   [MCP_TOOL_READ_OUTPUT]: 'Read accumulated output from a session, with optional since_seq cursor and ANSI strip.',
   [MCP_TOOL_KILL]: 'Terminate a session by sending the requested signal (SIGINT / SIGTERM / SIGKILL; defaults to SIGTERM). No automatic escalation — the caller is responsible for retrying with a stronger signal if the process does not exit.',
+  [MCP_TOOL_RESIZE]: "Resize a session's PTY columns + rows. Use on viewport resize / xterm fit-addon events to keep PTY size in sync with renderer cols/rows so TUI apps (Claude Code, Codex CLI, htop, vim) can reflow correctly. node-pty resize errors (EBADF / ENOTTY / EINVAL) propagate as isError.",
 } as const;
 
 export interface CreateTerminalMcpServerOptions {
@@ -78,6 +82,7 @@ export function createTerminalMcpServer(opts: CreateTerminalMcpServerOptions = {
     [MCP_TOOL_PRESS_KEY]: makePressKeyHandler({ sessions }),
     [MCP_TOOL_READ_OUTPUT]: makeReadOutputHandler({ sessions }),
     [MCP_TOOL_KILL]: makeKillHandler({ sessions }),
+    [MCP_TOOL_RESIZE]: makeResizeHandler({ sessions }),
   };
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -116,6 +121,11 @@ export function createTerminalMcpServer(opts: CreateTerminalMcpServerOptions = {
         name: MCP_TOOL_KILL,
         description: TOOL_DESCRIPTIONS[MCP_TOOL_KILL],
         inputSchema: zodToJsonSchema(killInputSchema),
+      },
+      {
+        name: MCP_TOOL_RESIZE,
+        description: TOOL_DESCRIPTIONS[MCP_TOOL_RESIZE],
+        inputSchema: zodToJsonSchema(resizeInputSchema),
       },
     ],
   }));

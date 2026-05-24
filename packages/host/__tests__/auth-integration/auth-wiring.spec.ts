@@ -96,7 +96,7 @@ describe('host auth integration', { timeout: 30_000 }, () => {
 
     const tools = await client.listTools();
 
-    expect(tools.tools).toHaveLength(7);
+    expect(tools.tools).toHaveLength(8);
   });
 
   it('rejects missing authorization header', async () => {
@@ -213,7 +213,7 @@ describe('host auth integration', { timeout: 30_000 }, () => {
     const body = await readSseJson(response);
 
     expect(response.status).toBe(200);
-    expect(body.result?.tools).toHaveLength(7);
+    expect(body.result?.tools).toHaveLength(8);
   });
 
   it('accepts bearer scheme case-insensitively', async () => {

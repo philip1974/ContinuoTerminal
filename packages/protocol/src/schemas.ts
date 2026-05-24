@@ -18,6 +18,7 @@ export const MCP_TOOL_SEND_TEXT = 'terminal.send_text';
 export const MCP_TOOL_PRESS_KEY = 'terminal.press_key';
 export const MCP_TOOL_READ_OUTPUT = 'terminal.read_output';
 export const MCP_TOOL_KILL = 'terminal.kill';
+export const MCP_TOOL_RESIZE = 'terminal.resize';
 
 // ── list_sessions ──────────────────────────────────────────────
 
@@ -229,3 +230,24 @@ export const killOutputSchema = z.object({}).strict();
 
 export type KillInput = z.infer<typeof killInputSchema>;
 export type KillOutput = z.infer<typeof killOutputSchema>;
+
+// ── resize(P1 visual distortion follow-up)─────────────────────
+// Resize a session's PTY columns + rows. Backs SessionManager.resize() which
+// has existed since P1 ship — only the MCP wire was missing. Downstream
+// xterm-based renderers call this on viewport resize / fit-addon event to
+// keep PTY size in sync with rendered cols/rows. Without it, TUI apps
+// (claude / codex / htop / vim) cannot reflow to actual viewport size and
+// content displays misaligned in oversized renderers.
+
+export const resizeInputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    cols: z.number().int().positive(),
+    rows: z.number().int().positive(),
+  })
+  .strict();
+
+export const resizeOutputSchema = z.object({}).strict();
+
+export type ResizeInput = z.infer<typeof resizeInputSchema>;
+export type ResizeOutput = z.infer<typeof resizeOutputSchema>;

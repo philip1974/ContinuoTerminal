@@ -8,6 +8,7 @@ import {
   MCP_TOOL_PRESS_KEY,
   MCP_TOOL_READ_OUTPUT,
   MCP_TOOL_KILL,
+  MCP_TOOL_RESIZE,
   createSessionInputSchema,
   createSessionOutputSchema,
   listSessionsOutputSchema,
@@ -19,7 +20,7 @@ import {
 
 // ── Group 1: tool name constants smoke (2 cases) ──────────────────────────
 describe('tool name constants', () => {
-  it('exports 7 tool constants all prefixed with terminal.', () => {
+  it('exports 8 tool constants all prefixed with terminal.', () => {
     const constants = [
       MCP_TOOL_LIST_SESSIONS,
       MCP_TOOL_CREATE_SESSION,
@@ -28,25 +29,17 @@ describe('tool name constants', () => {
       MCP_TOOL_PRESS_KEY,
       MCP_TOOL_READ_OUTPUT,
       MCP_TOOL_KILL,
+      MCP_TOOL_RESIZE,
     ];
-    expect(constants).toHaveLength(7);
+    expect(constants).toHaveLength(8);
     for (const c of constants) {
       expect(c).toMatch(/^terminal\./);
     }
   });
 
-  it('does not export MCP_TOOL_RESIZE or terminal.resize (strict 7-tool mirror per plan-v4 P2-1)', () => {
-    expect(Object.keys(protocol)).not.toContain('MCP_TOOL_RESIZE');
-    const toolValues = [
-      MCP_TOOL_LIST_SESSIONS,
-      MCP_TOOL_CREATE_SESSION,
-      MCP_TOOL_SEND_INPUT,
-      MCP_TOOL_SEND_TEXT,
-      MCP_TOOL_PRESS_KEY,
-      MCP_TOOL_READ_OUTPUT,
-      MCP_TOOL_KILL,
-    ];
-    expect(toolValues).not.toContain('terminal.resize');
+  it('exports MCP_TOOL_RESIZE === "terminal.resize" (topic 46 — P1.6 visual distortion fix)', () => {
+    expect(Object.keys(protocol)).toContain('MCP_TOOL_RESIZE');
+    expect(MCP_TOOL_RESIZE).toBe('terminal.resize');
   });
 });
 

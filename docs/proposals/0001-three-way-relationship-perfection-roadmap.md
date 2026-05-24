@@ -182,10 +182,10 @@ F1 fix + manual UX 都 closed,但**没 mechanical 防 future paste-stuck regress
 | Phase     | Goal                    | Calendar                 | 完成后状态升级                       | Status |
 | --------- | ----------------------- | ------------------------ | ----------------------------- | ------ |
 | P1        | AiQ real adoption       | \~1.5 weeks              | 三方都真用对方 primitive             | ✓ Done(2026-05-24;ADR 0007;14 AiQ files;cargo test 26 PASS;manual UX AC1-3 PASS;regression S1 held)|
-| P2        | Contract + drift guards | \~1 week                 | API 升级 silent break 不可能       | ⏸ Pending |
+| P2        | Contract + drift guards | \~1 week                 | API 升级 silent break 不可能       | ✓ Done(2026-05-24;ADR 0008;16 files;commit `f8ffe2b`;6 contract specs / 38 tests / 0 hard-forbidden leak hits / 20-entry baseline / advisory version drift;real Rust serde regression 推 AiQ follow-up topic per Strategy α)|
 | P3        | UX e2e hardening        | \~1 week                 | 关键 UX path 自动 regression gate | ⏸ Pending |
 | P4        | Distribution re-eval    | \~3 days(或 1 week)       | 决断 publish 或 explicit defer   | ⏸ Pending |
-| **Total** | <br />                  | **\~4-5 weeks calendar** | <br />                        | **P1 done(~1.5 weeks calendar 实际更短 single-session intensive)** |
+| **Total** | <br />                  | **\~4-5 weeks calendar** | <br />                        | **P1 + P2 done(single-session intensive;3 codex red-team rounds per phase 2 — round limit reached + manual_override resolution)** |
 
 ***
 

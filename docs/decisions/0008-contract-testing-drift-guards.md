@@ -1,6 +1,6 @@
 # ADR 0008 — Contract Testing + Drift Guards(Phase 2 of Proposal 0001)
 
-* **Status**: Accepted(scope locked 2026-05-24)
+* **Status**: Implemented + Verified(2026-05-24;commit `f8ffe2b`;6 contract specs / 38 tests / 0 hard-forbidden leak hits / 20-entry baseline / version drift advisory)
 * **Date**: 2026-05-24
 * **Supersedes**: nothing — first contract-testing ADR
 * **References**:
@@ -139,12 +139,12 @@ P2 全部完成的判定:
 
 | ID | Status | Commit | Outcome note |
 |---|---|---|---|
-| P2.1 ADR 0008 spec | Done | _this commit_ | Scope + invariants locked;4-guard design |
-| P2.2 dl-req topic 42 | Pending | — | — |
-| P2.3 dl-plan v1 | Pending | — | — |
-| P2.4 Codex red-team | Pending | — | — |
-| P2.5 plan-v2 + execute | Pending | — | — |
-| P2.6 Verify | Pending | — | — |
+| P2.1 ADR 0008 spec | Done | `a8a3738` | Scope + invariants locked;4-guard design |
+| P2.2 dl-req topic 42 | Done | (`.claude/` gitignored) | req.md complexity=standard;3 AC + 5 Safeguards + 7 Norms + 6 Unknowns |
+| P2.3 dl-plan v1/v2/v3 | Done | (`.claude/` gitignored) | 3 plan rounds(round limit hit);each addressed prior red-team P0 via real source-read |
+| P2.4 Codex red-team v1/v2/v3 | Done | (terminal session) | 3 codex audit rounds:R1 BLOCK 4 P0(假设错)→ R2 BLOCK 3 P0(残留)→ R3 BLOCK 1 P0(baseline count discrepancy). Codex round-3 own NEED-INFO offered resolution path. |
+| P2.5 plan-v4 integrate + execute | Done | `f8ffe2b` | plan-v4 manual_override per codex R3 NEED-INFO + user autonomous;9 ops in single batch;16 files |
+| P2.6 Verify | Done | (this commit) | typecheck:contract / test:contract(6 files 38 tests) / leak:check(0 hard-forbidden + 29 baselined) / version:check(advisory)全 PASS;既有 244 tests + typecheck no regression |
 
 ---
 

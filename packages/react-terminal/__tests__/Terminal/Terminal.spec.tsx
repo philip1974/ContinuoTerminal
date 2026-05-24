@@ -3,12 +3,18 @@ import { cleanup, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@xterm/xterm', () => {
+  // Topic 53: Terminal component now uses attachCustomKeyEventHandler for
+  // shared key-mapping (Shift+Enter → ESC+CR). Mock needs to expose it +
+  // cols/rows reads for terminal.resize wire.
   const mocks = {
+    cols: 80,
+    rows: 24,
     onData: vi.fn(() => ({ dispose: vi.fn() })),
     open: vi.fn(),
     write: vi.fn(),
     dispose: vi.fn(),
     loadAddon: vi.fn(),
+    attachCustomKeyEventHandler: vi.fn(),
   };
   return { Terminal: vi.fn().mockImplementation(() => mocks), __mocks: mocks };
 });
@@ -16,6 +22,16 @@ vi.mock('@xterm/xterm', () => {
 vi.mock('@xterm/addon-fit', () => ({
   FitAddon: vi.fn().mockImplementation(() => ({ fit: vi.fn(), activate: vi.fn(), dispose: vi.fn() })),
 }));
+
+// Topic 53: ResizeObserver isn't in jsdom; stub it as no-op.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).ResizeObserver = class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
 
 import { Terminal as XTermMock } from '@xterm/xterm';
 

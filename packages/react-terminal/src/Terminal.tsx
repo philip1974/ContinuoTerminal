@@ -1,12 +1,35 @@
 import { useEffect, useRef } from 'react';
 import { FitAddon } from '@xterm/addon-fit';
 import { Terminal as XTerm } from '@xterm/xterm';
-import type { IDisposable } from '@xterm/xterm';
 import type { ReadOutputOutput } from '@continuo-terminal/protocol';
 
+import {
+  applyMappedKeyOnKeydown,
+  consumeMappedKeyOnData,
+  createMappedKeyState,
+  shouldSkipXtermKey,
+} from './key-mapping.js';
 import { parseCallToolResult } from './parse-result.js';
 import type { TerminalProps } from './types.js';
 
+/**
+ * Production xterm renderer for ContinuoTerminal sidecar sessions.
+ *
+ * Topic 53 upgrades over the v0.1.0 reference impl:
+ * - **Shared key-mapping** (Shift+Enter → ESC+CR for ink-based CLIs)
+ * - **Raw data field** (topic 51) — uses `parsed.data` instead of
+ *   `lines.join('\r\n')` to preserve `\r`-only spinner / cursor-positioning
+ *   updates that would otherwise corrupt TUI rendering (stacked spinner
+ *   frames, "Stewing@MacBook-Pro" char overlay).
+ * - **strip_ansi: false** default — preserves color/escape codes (TUI apps
+ *   like Claude Code render heavy ANSI).
+ * - **FitAddon + ResizeObserver + terminal.resize wire** — host container
+ *   sizing reflects to PTY via topic 46 MCP terminal.resize.
+ * - **xtermOptions prop** — host passes ITerminalOptions for theme / cursor /
+ *   font / scrollback customization without re-implementing the renderer.
+ * - **hidden prop** — when host's panel is not visible (tab inactive), the
+ *   component pauses polling and skips fit-on-show until visible again.
+ */
 export function Terminal({
   sessionId,
   adapter,
@@ -17,6 +40,8 @@ export function Terminal({
   className,
   style,
   onError,
+  xtermOptions,
+  hidden,
 }: TerminalProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<XTerm | null>(null);
@@ -24,8 +49,10 @@ export function Terminal({
   const sinceSeqRef = useRef(initialSinceSeq);
   const inFlightRef = useRef(false);
   const onErrorRef = useRef(onError);
+  const hiddenRef = useRef(hidden);
 
   onErrorRef.current = onError;
+  hiddenRef.current = hidden;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -33,27 +60,89 @@ export function Terminal({
       return;
     }
 
-    const terminal = new XTerm({ cols, rows });
+    // xterm.js: cols/rows are constructor-init options, ITerminalOptions
+    // (passed via .options later) doesn't include them — merged as untyped
+    // here then cast to satisfy the constructor signature.
+    const terminal = new XTerm({ cols, rows, ...(xtermOptions ?? {}) } as ConstructorParameters<typeof XTerm>[0]);
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.open(container);
-    const onDataDisposable = terminal.onData((text) => {
-      adapter.callTool('terminal.send_text', { session_id: sessionId, text }).catch((err: unknown) => {
-        onErrorRef.current?.(err);
-      });
+
+    // Topic 53: install shared key-mapping. shouldSkipXtermKey returns false to
+    // let xterm handle the keydown (Shift+(Cmd|Ctrl)+Enter case is for host
+    // command system — host integration must intercept via document-level
+    // listener if needed; not surfaced at this layer).
+    const mappedKeyState = createMappedKeyState();
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (shouldSkipXtermKey(event)) return false;
+      applyMappedKeyOnKeydown(mappedKeyState, event);
+      return true;
     });
+
+    const onDataDisposable = terminal.onData((data) => {
+      const outgoing = consumeMappedKeyOnData(mappedKeyState, data);
+      adapter
+        .callTool('terminal.send_text', { session_id: sessionId, text: outgoing })
+        .catch((err: unknown) => {
+          onErrorRef.current?.(err);
+        });
+    });
+
+    // Topic 53: FitAddon + ResizeObserver wire → MCP terminal.resize
+    const doFit = () => {
+      try {
+        fitAddon.fit();
+        if (terminal.cols > 0 && terminal.rows > 0) {
+          adapter
+            .callTool('terminal.resize', {
+              session_id: sessionId,
+              cols: terminal.cols,
+              rows: terminal.rows,
+            })
+            .catch((err: unknown) => onErrorRef.current?.(err));
+        }
+      } catch (err) {
+        onErrorRef.current?.(err);
+      }
+    };
+    // Initial fit; if container has no layout yet, retry on next frame.
+    if (container.clientWidth > 0 && container.clientHeight > 0) {
+      doFit();
+    } else {
+      requestAnimationFrame(doFit);
+    }
+    const resizeObserver = new ResizeObserver(() => {
+      if (hiddenRef.current) return;
+      doFit();
+    });
+    resizeObserver.observe(container);
 
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
     return () => {
+      resizeObserver.disconnect();
       onDataDisposable.dispose();
       fitAddon.dispose();
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
     };
-  }, [adapter, cols, rows, sessionId]);
+  }, [adapter, cols, rows, sessionId, xtermOptions]);
+
+  // Re-fit on hidden → visible transition (host panel toggled back).
+  useEffect(() => {
+    if (hidden) return;
+    const fit = fitAddonRef.current;
+    if (!fit) return;
+    requestAnimationFrame(() => {
+      try {
+        fit.fit();
+      } catch {
+        // dispose race during hide/show — ignore
+      }
+    });
+  }, [hidden]);
 
   useEffect(() => {
     sinceSeqRef.current = initialSinceSeq;
@@ -61,17 +150,9 @@ export function Terminal({
 
   useEffect(() => {
     if (typeof adapter.subscribeOutput === 'function') {
-      // Same `cancelled` guard as the polling branch (round-3 P1 #4): an
-      // adapter whose unsubscribe() is not synchronous, or that already has
-      // a queued callback in flight at the moment sessionId changes, would
-      // otherwise write stale lines into the new terminal and corrupt
-      // sinceSeqRef for the new session. Round-5 audit P1: the round-3
-      // fix only covered polling and missed this branch.
       let cancelled = false;
       const unsubscribe = adapter.subscribeOutput(sessionId, (lines, nextSeq) => {
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
         if (lines.length > 0) {
           terminalRef.current?.write(lines.join('\r\n'));
         }
@@ -87,36 +168,31 @@ export function Terminal({
       return;
     }
 
-    // cancelled is the effect-local "generation token" that lets us reject
-    // in-flight read_output results after sessionId / adapter / pollIntervalMs
-    // changes. Without it, a result that started on the old session can write
-    // stale lines into the new terminal and corrupt sinceSeqRef.
     let cancelled = false;
 
     const tick = async () => {
-      if (inFlightRef.current) {
-        return;
-      }
+      if (hiddenRef.current) return;
+      if (inFlightRef.current) return;
       inFlightRef.current = true;
-
       try {
+        // Topic 51: strip_ansi=false preserves color codes + cursor positioning.
+        // Topic 51: prefer raw `data` field (no \r-eating spinner residue).
         const result = await adapter.callTool<unknown>('terminal.read_output', {
           session_id: sessionId,
           since_seq: sinceSeqRef.current,
-          strip_ansi: true,
+          strip_ansi: false,
         });
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
         const parsed = parseCallToolResult<ReadOutputOutput>(result);
-        if (parsed.lines.length > 0) {
+        if (parsed.data && parsed.data.length > 0) {
+          terminalRef.current?.write(parsed.data);
+        } else if (parsed.lines.length > 0) {
+          // Backwards-compat for sidecar versions < topic 51 that lack data
           terminalRef.current?.write(parsed.lines.join('\r\n'));
         }
         sinceSeqRef.current = parsed.next_seq;
       } catch (err) {
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
         onErrorRef.current?.(err);
       } finally {
         inFlightRef.current = false;

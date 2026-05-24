@@ -146,6 +146,48 @@
       "pattern": "Continuo",
       "excerpt": "   * payloads in Continuo do not forward this field.",
       "rationale": "JSDoc consumer note"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 16,
+      "pattern": "Continuo",
+      "excerpt": " * Production xterm renderer for ContinuoTerminal sidecar sessions.",
+      "rationale": "Topic 53 component JSDoc — references product name in consumer documentation"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 30,
+      "pattern": "panel",
+      "excerpt": " * - **hidden prop** — when host's panel is not visible (tab inactive), the",
+      "rationale": "Topic 53 component JSDoc — host's panel/tab concept (generic UI term, not Continuo-specific)"
+    },
+    {
+      "file": "packages/react-terminal/src/key-mapping.ts",
+      "line": 23,
+      "pattern": "Continuo",
+      "excerpt": " * — Continuo uses this to delegate to document-level command system (terminal",
+      "rationale": "Topic 53 key-mapping JSDoc — references Continuo as example consumer"
+    },
+    {
+      "file": "packages/react-terminal/src/types.ts",
+      "line": 28,
+      "pattern": "panel",
+      "excerpt": "   * fit-on-mount until next visible transition. Use when host panel/tab",
+      "rationale": "Topic 53 TerminalProps JSDoc — generic host panel/tab terminology"
+    },
+    {
+      "file": "packages/react-terminal/src/key-mapping.ts",
+      "line": 2,
+      "pattern": "Continuo",
+      "excerpt": "// Origin: Continuo `src/panels/Terminal/key-mapping.ts` (F1 paste-stuck fix",
+      "rationale": "Topic 53 key-mapping module provenance comment"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 133,
+      "pattern": "panel",
+      "excerpt": "  // Re-fit on hidden → visible transition (host panel toggled back).",
+      "rationale": "Topic 53 component inline comment — generic host panel terminology"
     }
   ]
 }

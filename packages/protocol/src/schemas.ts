@@ -209,6 +209,16 @@ export const readOutputInputSchema = z
 export const readOutputOutputSchema = z
   .object({
     lines: z.array(z.string()),
+    /**
+     * Raw concatenated output since `since_seq` with original byte stream
+     * preserved (NO splitting / line normalization / trailing-newline insertion).
+     * TUI consumers (xterm renderers running ink-based CLIs like Claude Code,
+     * Codex, htop) MUST use `data` instead of `lines` — `\r`-only cursor
+     * updates (spinner frames, in-place redraws) are corrupted when output
+     * is split-then-rejoined with newline. `lines` is preserved for non-TUI
+     * consumers + backwards compat.
+     */
+    data: z.string(),
     next_seq: z.number().int().nonnegative(),
     truncated: z.boolean(),
   })

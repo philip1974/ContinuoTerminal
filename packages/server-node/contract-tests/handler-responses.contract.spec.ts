@@ -33,7 +33,7 @@ describe('server-node handler responses — contract', () => {
 
     it('read_output success shape', async () => {
       const mockSm = {
-        readOutput: vi.fn().mockResolvedValue({ lines: ['hello'], next_seq: 1, truncated: false }),
+        readOutput: vi.fn().mockResolvedValue({ lines: ['hello'], data: "'hello'\n", next_seq: 1, truncated: false }),
       };
       const h = makeReadOutputHandler({ sessions: mockSm as any });
       const result: any = await h({ session_id: 's' });

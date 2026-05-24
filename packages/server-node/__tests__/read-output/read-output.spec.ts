@@ -4,7 +4,7 @@ import { makeReadOutputHandler } from '../../src/handlers/read-output.js';
 
 describe('terminal.read_output', () => {
   it('returns text and structured content for valid input', async () => {
-    const output = { lines: ['hello'], next_seq: 2, truncated: false };
+    const output = { lines: ['hello'], data: 'hello\n', next_seq: 2, truncated: false };
     const sessions = { readOutput: vi.fn().mockResolvedValue(output) };
     const handler = makeReadOutputHandler({ sessions: sessions as any });
 

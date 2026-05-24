@@ -97,7 +97,7 @@ describe('protocol I/O schemas roundtrip — contract', () => {
   });
 
   it('readOutput output requires lines + next_seq + truncated', () => {
-    expect(readOutputOutputSchema.safeParse({ lines: [], next_seq: 0, truncated: false }).success).toBe(true);
+    expect(readOutputOutputSchema.safeParse({ lines: [], data: "", next_seq: 0, truncated: false }).success).toBe(true);
     expect(readOutputOutputSchema.safeParse({ lines: [] }).success).toBe(false);
   });
 

@@ -169,7 +169,7 @@ describe('readOutputOutputSchema (B4 truncated required)', () => {
     expect(() => readOutputOutputSchema.parse({ lines: [], next_seq: 0 } as any)).toThrow();
   });
   it('accepts full shape', () => {
-    const v = readOutputOutputSchema.parse({ lines: ['hi'], next_seq: 1, truncated: false });
+    const v = readOutputOutputSchema.parse({ lines: ['hi'], data: 'hi\n', next_seq: 1, truncated: false });
     expect(v.truncated).toBe(false);
   });
 });

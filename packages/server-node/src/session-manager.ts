@@ -268,6 +268,11 @@ export class SessionManager {
 
     return {
       lines: limited,
+      // Raw text preserved (no splitting / line normalization). TUI consumers
+      // MUST use this — Claude/Codex/htop ink-based CLIs render spinner frames
+      // via `\r` cursor returns (without `\n`); splitting on `/\r?\n/` then
+      // rejoining with `\n` corrupts the cursor positioning.
+      data: normalized,
       next_seq: nextSeq,
       truncated: truncated || limited.length < lines.length,
     };

@@ -1,6 +1,6 @@
 # ADR 0007 — AiQ Real Adoption via Additive Sidecar(Phase 1 of Proposal 0001)
 
-* **Status**: **Implemented + Verified**(2026-05-24 — Phase 1 complete)
+* **Status**: **Superseded → Path B Full-Swap**(2026-05-24 — initial "additive 双 backend" invariant chosen as P1.6 prudence;post topic 51 validation(ContinuoTerminal `506a7fb` + AiQ `a169166`: read_output raw byte stream restored)the sidecar path achieves byte-equivalent TUI behavior to Rust portable-pty;user explicitly chose Path B full-swap to claim full maintainability benefit. AiQ Rust portable-pty code DELETED in topic 52. Single PTY abstraction via ContinuoTerminal sidecar. `AIQ_CLAUDE_CODEX_BACKEND=rust` env opt-out no longer exists.)
 * **Date**: 2026-05-24
 * **Supersedes**: nothing — first AiQ-side adoption ADR
 * **References**:

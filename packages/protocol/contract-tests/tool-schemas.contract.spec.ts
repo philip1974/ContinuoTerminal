@@ -43,6 +43,32 @@ describe('protocol I/O schemas roundtrip — contract', () => {
     expect(createSessionInputSchema.safeParse({ shell: '/bin/zsh', cols: 80, rows: 24 }).success).toBe(true);
   });
 
+  it('createSession accepts args field (topic 44 P1 known-limit follow-up)', () => {
+    expect(createSessionInputSchema.safeParse({ args: ['-l', '-i'] }).success).toBe(true);
+  });
+
+  it('createSession accepts env field', () => {
+    expect(createSessionInputSchema.safeParse({ env: { FOO: 'bar' } }).success).toBe(true);
+  });
+
+  it('createSession accepts shell + args + env together (CLI consumer use case)', () => {
+    expect(
+      createSessionInputSchema.safeParse({
+        shell: 'claude',
+        args: ['--resume'],
+        env: { ANTHROPIC_API_KEY: 'sk-test' },
+      }).success,
+    ).toBe(true);
+  });
+
+  it('createSession rejects args containing non-string elements', () => {
+    expect(createSessionInputSchema.safeParse({ args: [123] }).success).toBe(false);
+  });
+
+  it('createSession rejects env with non-string values', () => {
+    expect(createSessionInputSchema.safeParse({ env: { FOO: 123 } }).success).toBe(false);
+  });
+
   it('createSession output requires session_id', () => {
     expect(createSessionOutputSchema.safeParse({ session_id: 's-1' }).success).toBe(true);
     expect(createSessionOutputSchema.safeParse({}).success).toBe(false);

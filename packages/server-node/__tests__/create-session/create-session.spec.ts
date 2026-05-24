@@ -76,8 +76,10 @@ describe('terminal.create_session', () => {
     expect(sessions.create).toHaveBeenCalledWith({ target: { kind: 'active' } });
   });
 
-  it('rejects lib-only fields (session_id / args / env) via createSessionInputSchema.strict()', () => {
-    // Protocol-layer Zod schema must NOT accept SessionManagerCreateInput lib-only fields.
+  it('rejects truly lib-only fields (session_id) via createSessionInputSchema.strict()', () => {
+    // Protocol-layer Zod schema must NOT accept SessionManager-internal fields
+    // (output identifiers etc.). `args` and `env` were promoted to wire fields
+    // in topic 44 (P1 shell-parity follow-up — per ADR 0008/0009 known-limit).
     expect(() =>
       createSessionInputSchema.strict().parse({
         name: 'x',
@@ -85,21 +87,36 @@ describe('terminal.create_session', () => {
         session_id: 'lib-only',
       }),
     ).toThrow();
+  });
+
+  it('accepts args + env wire fields (topic 44 — P1 shell-parity unblock)', () => {
+    // server-node SessionManager already consumes args + env at runtime
+    // (covered by runtime-api/args.spec.ts + env.spec.ts). Topic 44 exposed
+    // them on the wire so cross-repo consumers (AiQ / Continuo / X-project)
+    // can pass per-session CLI flags + environment overrides.
+    expect(() =>
+      createSessionInputSchema.strict().parse({
+        name: 'x',
+        shell: 'claude',
+        args: ['--resume'],
+      }),
+    ).not.toThrow();
 
     expect(() =>
       createSessionInputSchema.strict().parse({
         name: 'x',
-        shell: '/bin/zsh',
-        args: ['-l'],
+        shell: 'codex',
+        env: { OPENAI_API_KEY: 'sk-test' },
       }),
-    ).toThrow();
+    ).not.toThrow();
 
     expect(() =>
       createSessionInputSchema.strict().parse({
         name: 'x',
-        shell: '/bin/zsh',
-        env: { FOO: 'bar' },
+        shell: 'claude',
+        args: ['--resume'],
+        env: { ANTHROPIC_API_KEY: 'sk-test' },
       }),
-    ).toThrow();
+    ).not.toThrow();
   });
 });

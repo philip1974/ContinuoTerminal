@@ -74,7 +74,10 @@ describe('server-integration', { timeout: 60_000 }, () => {
     expect(result.structuredContent).toEqual({ sessions: [] });
   });
 
-  it('terminal.create_session MCP input schema does not expose lib-only fields', async () => {
+  it('terminal.create_session MCP input schema exposes args + env (topic 44) but not session_id', async () => {
+    // topic 44 (P1 shell-parity follow-up): args + env are wire-public for
+    // cross-repo consumers passing per-session CLI flags + env overrides.
+    // session_id remains lib-only (it's an OUTPUT identifier, never input).
     transport = new StdioClientTransport({ command: 'tsx', args: [serverPath] });
     client = new Client({ name: 'test', version: '0' }, { capabilities: {} });
 
@@ -86,7 +89,7 @@ describe('server-integration', { timeout: 60_000 }, () => {
     const schema = createTool!.inputSchema as { properties?: Record<string, unknown> };
     expect(schema.properties).toBeDefined();
     expect(schema.properties).not.toHaveProperty('session_id');
-    expect(schema.properties).not.toHaveProperty('args');
-    expect(schema.properties).not.toHaveProperty('env');
+    expect(schema.properties).toHaveProperty('args');
+    expect(schema.properties).toHaveProperty('env');
   });
 });

@@ -87,10 +87,25 @@ export const createSessionInputSchema = z
     agentLabel: z.string().optional(),
     /** Override the spawned shell binary. Defaults to $SHELL or /bin/zsh. */
     shell: z.string().optional(),
+    /**
+     * Per-session CLI args appended to `shell` spawn (e.g. `['-l', '-i']` for
+     * interactive login shell, or specific CLI flags when `shell` is a CLI
+     * binary like `claude` or `codex`). server-node SessionManager forwards
+     * directly to node-pty's spawn args. Default: empty args when omitted.
+     */
+    args: z.array(z.string()).optional(),
     /** PTY column count (default 80). */
     cols: z.number().int().positive().optional(),
     /** PTY row count (default 24). */
     rows: z.number().int().positive().optional(),
+    /**
+     * Per-session environment variable overrides merged into the spawn env on
+     * top of host process env + `TERM`/`COLORTERM` defaults. Use for
+     * agent-specific tokens (e.g. `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) or
+     * locale/PATH adjustments. server-node merges via `{ ...process.env,
+     * ...input.env }` so caller keys take precedence over parent process env.
+     */
+    env: z.record(z.string(), z.string()).optional(),
     /** spawn 后 delay 200ms(Windows 600)键入此命令 + \n. */
     autorun: z.string().optional(),
     /**

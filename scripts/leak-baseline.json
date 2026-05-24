@@ -1,0 +1,151 @@
+{
+  "$schema_version": 1,
+  "$design_notes": [
+    "Source of truth: rg -n -e '(panelId|windowId|\\bpanel\\b|\\bTauri\\b|\\bElectron\\b|Continuo)' packages/*/src/",
+    "Generated 2026-05-24 from clean post-P1 ContinuoTerminal repo state.",
+    "Line numbers are reference only. The 'excerpt' field is the stable matcher — if source moves but excerpt unchanged, leak-check still recognizes the hit.",
+    "If new compat reference legitimately needs to be added to packages/*/src/, append entry here in the same commit."
+  ],
+  "entries": [
+    {
+      "file": "packages/protocol/src/index.ts",
+      "line": 4,
+      "pattern": "Continuo",
+      "excerpt": "// mirrored from Continuo). Keep this barrel minimal: it should not introduce",
+      "rationale": "Barrel JSDoc — Continuo provenance reference (ADR 0006 §3 mirror invariant)"
+    },
+    {
+      "file": "packages/react-terminal/src/http-adapter.ts",
+      "line": 7,
+      "pattern": "Electron",
+      "excerpt": " * Use this when embedding the `<Terminal>` component in a non-Electron host",
+      "rationale": "createHttpMCPClientAdapter JSDoc host enumeration"
+    },
+    {
+      "file": "packages/react-terminal/src/http-adapter.ts",
+      "line": 8,
+      "pattern": "Tauri",
+      "excerpt": " * (browser app / VS Code webview / Tauri renderer / standalone web demo etc.)",
+      "rationale": "createHttpMCPClientAdapter JSDoc host enumeration"
+    },
+    {
+      "file": "packages/server-node/src/auth-hooks.ts",
+      "line": 3,
+      "pattern": "Electron/window/panel",
+      "excerpt": " * MCP tool-call authorization. Carries no Electron/window/panel specifics -",
+      "rationale": "AuthorizationDecision JSDoc invariant comment"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 2,
+      "pattern": "Continuo",
+      "excerpt": "// Semantically mirrored from Continuo's electron/shared/mcp-terminal-schemas.ts",
+      "rationale": "Mirror provenance JSDoc"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 4,
+      "pattern": "Continuo",
+      "excerpt": "// Continuo source commit at mirror time:",
+      "rationale": "Mirror provenance JSDoc"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 7,
+      "pattern": "Continuo",
+      "excerpt": "// Updates to Continuo's source require a follow-up sync topic in this repo;",
+      "rationale": "Mirror provenance JSDoc"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 58,
+      "pattern": "panel",
+      "excerpt": " * kind='active'(默认)— main 通过 IPC query renderer 当前 active terminal panel。",
+      "rationale": "attachTargetSchema JSDoc kind='active' description"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 59,
+      "pattern": "panelId",
+      "excerpt": " * kind='panel' — 显式指定 panelId。",
+      "rationale": "attachTargetSchema JSDoc kind='panel' description"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 60,
+      "pattern": "windowId",
+      "excerpt": " * kind='window' — 指定 windowId,落到该窗口 first visible terminal panel。",
+      "rationale": "attachTargetSchema JSDoc kind='window' description"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 68,
+      "pattern": "Continuo/Electron/Tauri",
+      "excerpt": " * a Continuo-style multi-panel renderer (e.g. an Electron / Tauri sidecar",
+      "rationale": "JSDoc forward-compat host enumeration"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 69,
+      "pattern": "window/panel",
+      "excerpt": " * that translates `target.kind` into a window/panel selection before",
+      "rationale": "JSDoc kind discriminator doc"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 74,
+      "pattern": "Continuo/panel/window",
+      "excerpt": "// Legacy host attachment compatibility (Continuo panel/window concept).",
+      "rationale": "attachTargetSchema definition comment"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 77,
+      "pattern": "panel/panelId",
+      "excerpt": "  z.object({ kind: z.literal('panel'), panelId: z.string().min(1) }).strict(),",
+      "rationale": "attachTargetSchema panel discriminator (schema literal — ADR 0006 §3 deliberate compat)"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 78,
+      "pattern": "window/windowId",
+      "excerpt": "  z.object({ kind: z.literal('window'), windowId: z.number().int() }).strict(),",
+      "rationale": "attachTargetSchema window discriminator"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 99,
+      "pattern": "Continuo",
+      "excerpt": "     * Hosts proxying MCP calls into a Continuo-style multi-panel renderer",
+      "rationale": "createSessionInputSchema target field JSDoc"
+    },
+    {
+      "file": "packages/server-node/src/bin.mjs",
+      "line": 9,
+      "pattern": "Continuo",
+      "excerpt": "Run the Continuo Terminal MCP server.",
+      "rationale": "CLI --help text product attribution"
+    },
+    {
+      "file": "packages/server-node/src/session-manager.ts",
+      "line": 277,
+      "pattern": "Electron",
+      "excerpt": "   * Pull-based raw buffer snapshot for non-MCP consumers (e.g. Electron",
+      "rationale": "getBufferSnapshot JSDoc consumer attribution"
+    },
+    {
+      "file": "packages/server-node/src/session-manager.ts",
+      "line": 283,
+      "pattern": "Continuo",
+      "excerpt": "   * sendInput / sendText / pressKey / resize / readOutput. Continuo",
+      "rationale": "JSDoc consumer attribution"
+    },
+    {
+      "file": "packages/server-node/src/session-manager.ts",
+      "line": 288,
+      "pattern": "Continuo",
+      "excerpt": "   * payloads in Continuo do not forward this field.",
+      "rationale": "JSDoc consumer note"
+    }
+  ]
+}

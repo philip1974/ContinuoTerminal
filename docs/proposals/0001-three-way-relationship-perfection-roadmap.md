@@ -179,13 +179,13 @@ F1 fix + manual UX 都 closed,但**没 mechanical 防 future paste-stuck regress
 
 ## 全 roadmap 总览
 
-| Phase     | Goal                    | Calendar                 | 完成后状态升级                       |
-| --------- | ----------------------- | ------------------------ | ----------------------------- |
-| P1        | AiQ real adoption       | \~1.5 weeks              | 三方都真用对方 primitive             |
-| P2        | Contract + drift guards | \~1 week                 | API 升级 silent break 不可能       |
-| P3        | UX e2e hardening        | \~1 week                 | 关键 UX path 自动 regression gate |
-| P4        | Distribution re-eval    | \~3 days(或 1 week)       | 决断 publish 或 explicit defer   |
-| **Total** | <br />                  | **\~4-5 weeks calendar** | <br />                        |
+| Phase     | Goal                    | Calendar                 | 完成后状态升级                       | Status |
+| --------- | ----------------------- | ------------------------ | ----------------------------- | ------ |
+| P1        | AiQ real adoption       | \~1.5 weeks              | 三方都真用对方 primitive             | ✓ Done(2026-05-24;ADR 0007;14 AiQ files;cargo test 26 PASS;manual UX AC1-3 PASS;regression S1 held)|
+| P2        | Contract + drift guards | \~1 week                 | API 升级 silent break 不可能       | ⏸ Pending |
+| P3        | UX e2e hardening        | \~1 week                 | 关键 UX path 自动 regression gate | ⏸ Pending |
+| P4        | Distribution re-eval    | \~3 days(或 1 week)       | 决断 publish 或 explicit defer   | ⏸ Pending |
+| **Total** | <br />                  | **\~4-5 weeks calendar** | <br />                        | **P1 done(~1.5 weeks calendar 实际更短 single-session intensive)** |
 
 ***
 

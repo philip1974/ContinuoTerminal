@@ -1,6 +1,6 @@
 # ADR 0007 — AiQ Real Adoption via Additive Sidecar(Phase 1 of Proposal 0001)
 
-* **Status**: Accepted(scope locked 2026-05-24)
+* **Status**: **Implemented + Verified**(2026-05-24 — Phase 1 complete)
 * **Date**: 2026-05-24
 * **Supersedes**: nothing — first AiQ-side adoption ADR
 * **References**:
@@ -111,14 +111,19 @@ P1 全部完成的判定:
 
 ## Mini-topic status
 
-| ID | Status | Commit | Outcome note |
+| ID | Status | Commit / Topic | Outcome note |
 |---|---|---|---|
-| P1.1 ADR 0007 spec | Done | _this commit_ | Scope + invariants locked;additive path |
-| P1.2 dl-req topic 40 | Pending | — | — |
-| P1.3 dl-plan v1 | Pending | — | — |
-| P1.4 Codex red-team | Pending | — | — |
-| P1.5 plan-v2 + execute | Pending | — | — |
-| P1.6 Working demo + UX verify | Pending | — | — |
+| P1.1 ADR 0007 spec | ✓ Done | `3a8cbc4` | Scope + invariants locked;additive path |
+| P1.2 dl-req(formal) | ✓ Done | `.claude/dev-loop/41-p1-aiq-additive-sidecar/req.md`(gitignored)| Topic 41 supersedes archived 40-* ad-hoc draft |
+| P1.3 dl-plan v1 | ✓ Done | plan-v1.md `.claude/41-*/`(gitignored)| Strategy α agent-kind-as-backend + Command direct |
+| P1.4 codex red-team round 1 | ✓ Done | red-team-v1.md(gitignored) | REVISE — 2 P0 + 5 P1 + 4 P2 + 3 NEED-INFO |
+| P1.4-r2 codex red-team round 2 | ✓ Done | red-team-v2.md(gitignored) | REVISE — **0 P0** + 5 P1 + 4 P2;P0 cleared confirms round-1 integration |
+| /dl-integrate v1→v2 | ✓ Done | plan-v2.md(gitignored)| 2 P0 + 5 P1 + 4 P2 accepted;P0-NEW server-node no terminal.resize surfaced + applied |
+| /dl-integrate v2→v3 | ✓ Done | plan-v3.md(gitignored)| 0 P0 + 5 P1 + 4 P2 accepted;refinement-only;round-3 codex skipped per skill heuristic |
+| P1.5 /dl-execute plan-v3 | ✓ Done | AiQ commits TBD by user | 14 AiQ files modified/new;cargo test 26 PASS;0 ContinuoTerminal modifications during execute |
+| P1.5-hotfix-1 | ✓ Done | AiQ commit TBD | `#[serde(rename = "continuo-terminal")]` wire shape fix |
+| P1.5-hotfix-2 | ✓ Done | AiQ commit TBD | sidecar.rs spawn → shell -l -i -c wrap pattern (PATH/nvm parity) |
+| P1.6 manual UX verify | ✓ Done | execute-log.md(gitignored)| AC1+AC2(functional;visual=known limit)+AC3 zero-zombie+regression S1 byte-identical all PASS |
 
 ---
 

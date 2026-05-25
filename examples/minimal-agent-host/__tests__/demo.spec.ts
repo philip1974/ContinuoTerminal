@@ -12,7 +12,9 @@ describe('minimal-agent-host demo', { timeout: 60_000 }, () => {
     child = null;
   });
 
-  it('prints lifecycle markers and exits 0', async () => {
+  // Skip on CI: example spawns host CLI which spawns server-node + node-pty PTY;
+  // CI runner can't spawn PTY reliably. See ADR-017 pattern #5.
+  it.skipIf(process.env.CI === 'true')('prints lifecycle markers and exits 0', async () => {
     const result = await new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve, reject) => {
       child = spawn('pnpm', ['--filter', '@continuo-terminal/example-minimal-agent-host', 'start'], {
         cwd: new URL('../../..', import.meta.url),

@@ -148,7 +148,9 @@ describe('streamable HTTP transport', { timeout: 60_000 }, () => {
     expect(url.hostname).toBe('127.0.0.1');
   });
 
-  it('allows concurrent clients to share one SessionManager', async () => {
+  // Skip on CI: calls terminal.create_session which spawns node-pty PTY;
+  // CI runner can't spawn PTY reliably. See ADR-017 pattern #5.
+  it.skipIf(process.env.CI === 'true')('allows concurrent clients to share one SessionManager', async () => {
     const spawned = spawnBin(['--transport', 'http', '--port', '0'], linkedBinPath);
     children.push(spawned.child);
     const url = await waitForListen(spawned);

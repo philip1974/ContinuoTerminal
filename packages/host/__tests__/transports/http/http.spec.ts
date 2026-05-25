@@ -32,7 +32,9 @@ describe('HTTP transport host integration', () => {
     expect(result.tools).toHaveLength(8);
   });
 
-  it('allows concurrent HTTP clients to share one host SessionManager', async () => {
+  // Skip on CI: calls terminal.create_session which spawns node-pty PTY;
+  // CI runner can't spawn PTY reliably. See ADR-017 pattern #5.
+  it.skipIf(process.env.CI === 'true')('allows concurrent HTTP clients to share one host SessionManager', async () => {
     host = await bootstrapAgentHost({ transport: { kind: 'http', port: 0 } });
     const [clientA, clientB] = await Promise.all([
       connect(host.transportInfo.endpoint, 'host-http-a'),

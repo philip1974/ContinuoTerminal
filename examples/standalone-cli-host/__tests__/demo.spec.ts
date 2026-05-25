@@ -14,7 +14,9 @@ describe('standalone-cli-host demo', { timeout: HOST_TIMEOUT_MS + 5_000 }, () =>
     child = null;
   });
 
-  it('runs an HTTP authenticated host demo without logging auth material', async () => {
+  // Skip on CI: example spawns host CLI which spawns server-node + node-pty PTY;
+  // CI runner can't spawn PTY reliably. See ADR-017 pattern #5.
+  it.skipIf(process.env.CI === 'true')('runs an HTTP authenticated host demo without logging auth material', async () => {
     const result = await new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve, reject) => {
       child = spawn('pnpm', ['--filter', '@continuo-terminal/example-standalone-cli-host', 'start'], {
         cwd: new URL('../../..', import.meta.url),

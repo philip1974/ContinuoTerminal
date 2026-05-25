@@ -17,7 +17,10 @@ describe('standalone-cli demo command', { timeout: 60_000 }, () => {
     child = null;
   });
 
-  it('prints demo markers and exits 0', async () => {
+  // Skip on CI: spawns `tsx` (not on GH Actions PATH) which then spawns node-pty
+  // PTY — same posix_spawnp/sandbox issue as integration-real.spec.ts.
+  // See ADR-017 pattern #5.
+  it.skipIf(process.env.CI === 'true')('prints demo markers and exits 0', async () => {
     const result = await new Promise<{ code: number | null; stdout: string; stderr: string }>((resolve) => {
       child = spawn('tsx', [cliPath, 'demo'], { stdio: ['ignore', 'pipe', 'pipe'] });
       let stdout = '';

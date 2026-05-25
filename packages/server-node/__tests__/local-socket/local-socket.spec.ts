@@ -104,7 +104,9 @@ describe('local socket transport', { timeout: 60_000 }, () => {
     expect(result.tools).toHaveLength(8);
   });
 
-  it('shares one SessionManager across multiple socket clients', async () => {
+  // Skip on CI: calls terminal.create_session which spawns node-pty PTY;
+  // CI runner can't spawn PTY reliably. See ADR-017 pattern #5.
+  it.skipIf(process.env.CI === 'true')('shares one SessionManager across multiple socket clients', async () => {
     const { socketPath } = await start();
     const [clientA, clientB] = await Promise.all([
       connectClient(socketPath, 'local-socket-a'),

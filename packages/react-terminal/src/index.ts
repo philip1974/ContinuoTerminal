@@ -13,3 +13,4 @@ export {
   shouldSkipXtermKey,
   type MappedKeyState,
 } from './key-mapping.js';
+export { chunkifyData, disposeQueue, safeWrite } from './safeWrite.js';

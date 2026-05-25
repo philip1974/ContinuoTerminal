@@ -38,3 +38,5 @@ export type {
   ConnectLocalSocketStdioProxyInput,
   LocalSocketStdioProxy,
 } from './transports/local-socket-proxy.js';
+export { isAllowedShell, getDefaultShell, prepareShellIntegrationEnv } from './shell-env/index.js';
+export type { SupportedShell } from './shell-env/index.js';

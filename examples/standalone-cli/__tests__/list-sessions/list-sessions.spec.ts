@@ -13,7 +13,9 @@ function getChildProcess(transport: StdioClientTransport | null): ChildProcess |
   return (transport as unknown as { _process?: ChildProcess; process?: ChildProcess } | null)?._process;
 }
 
-describe('standalone-cli list-sessions MCP client', { timeout: 60_000 }, () => {
+// Skip on CI: spawns `tsx` (not on GH Actions PATH) which then spawns node-pty
+// PTY via server-node. See ADR-017 pattern #5.
+describe.skipIf(process.env.CI === 'true')('standalone-cli list-sessions MCP client', { timeout: 60_000 }, () => {
   let client: Client | null = null;
   let transport: StdioClientTransport | null = null;
 

@@ -7,7 +7,7 @@
   "packageManager": "pnpm@9",
   "scripts": {
     "test": "vitest run",
-    "typecheck": "pnpm exec tsc --noEmit -p packages/protocol/tsconfig.json && pnpm exec tsc --noEmit -p packages/server-node/tsconfig.json && pnpm exec tsc --noEmit -p packages/react-terminal/tsconfig.json && pnpm exec tsc --noEmit -p packages/host/tsconfig.json && pnpm exec tsc --noEmit -p examples/minimal-react-host/tsconfig.json && pnpm exec tsc --noEmit -p examples/standalone-cli/tsconfig.json && pnpm exec tsc --noEmit -p examples/minimal-agent-host/tsconfig.json && pnpm exec tsc --noEmit -p examples/standalone-cli-host/tsconfig.json",
+    "typecheck": "pnpm exec tsc --noEmit -p packages/protocol/tsconfig.json && pnpm exec tsc --noEmit -p packages/server-node/tsconfig.json && pnpm exec tsc --noEmit -p packages/react-terminal/tsconfig.json && pnpm exec tsc --noEmit -p packages/host/tsconfig.json && pnpm exec tsc --noEmit -p examples/minimal-react-host/tsconfig.json && pnpm exec tsc --noEmit -p examples/standalone-cli/tsconfig.json && pnpm exec tsc --noEmit -p examples/minimal-agent-host/tsconfig.json && pnpm exec tsc --noEmit -p examples/standalone-cli-host/tsconfig.json && pnpm exec tsc --noEmit -p packages/shell-quote/tsconfig.json",
     "test:contract": "vitest --config vitest.contract.config.ts run",
     "typecheck:contract": "pnpm exec tsc --noEmit -p packages/protocol/contract-tests/tsconfig.json && pnpm exec tsc --noEmit -p packages/server-node/contract-tests/tsconfig.json && pnpm exec tsc --noEmit -p packages/host/contract-tests/tsconfig.json && pnpm exec tsc --noEmit -p packages/react-terminal/contract-tests/tsconfig.json",
     "verify:contract": "pnpm run typecheck:contract && pnpm run test:contract",

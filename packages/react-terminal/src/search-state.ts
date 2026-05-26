@@ -1,10 +1,10 @@
 export interface SearchDecorations {
   matchBackground?: string;
   matchBorder?: string;
-  matchOverviewRuler?: string;
+  matchOverviewRuler: string;
   activeMatchBackground?: string;
   activeMatchBorder?: string;
-  activeMatchColorOverviewRuler?: string;
+  activeMatchColorOverviewRuler: string;
 }
 
 export interface TerminalSearchAddonOptions {

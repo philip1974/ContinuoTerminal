@@ -15,6 +15,11 @@ import {
 
 const DECORATIONS: SearchDecorations = {
   matchBackground: '#fff',
+  matchBorder: '#fff',
+  matchOverviewRuler: '#fff',
+  activeMatchBackground: '#fff',
+  activeMatchBorder: '#fff',
+  activeMatchColorOverviewRuler: '#fff',
 };
 
 function addon(): SearchAddonLike {

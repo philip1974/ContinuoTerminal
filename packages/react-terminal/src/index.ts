@@ -36,3 +36,12 @@ export {
 
 // search-keymap
 export { isSearchHotkey } from './search-keymap.js';
+
+// osc7-cwd
+export {
+  type Osc7Disposable,
+  type Osc7Options,
+  type Osc7TermLike,
+  parseOsc7Cwd,
+  registerOsc7Cwd,
+} from './osc7-cwd.js';

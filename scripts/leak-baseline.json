@@ -39,22 +39,15 @@
       "file": "packages/protocol/src/schemas.ts",
       "line": 2,
       "pattern": "Continuo",
-      "excerpt": "// Semantically mirrored from Continuo's electron/shared/mcp-terminal-schemas.ts",
-      "rationale": "Mirror provenance JSDoc"
+      "excerpt": "// Continuo consumes this package via file: link; `electron/shared/mcp-terminal-schemas.ts` is a single-line re-export mirror that auto-tracks this file.",
+      "rationale": "Source-of-truth header; Continuo host consumes protocol package"
     },
     {
       "file": "packages/protocol/src/schemas.ts",
-      "line": 4,
+      "line": 3,
       "pattern": "Continuo",
-      "excerpt": "// Continuo source commit at mirror time:",
-      "rationale": "Mirror provenance JSDoc"
-    },
-    {
-      "file": "packages/protocol/src/schemas.ts",
-      "line": 7,
-      "pattern": "Continuo",
-      "excerpt": "// Updates to Continuo's source require a follow-up sync topic in this repo;",
-      "rationale": "Mirror provenance JSDoc"
+      "excerpt": "// Update this file when adding / extending MCP tool schemas; Continuo will pick up the change on next `pnpm install --offline`.",
+      "rationale": "Source-of-truth header; Continuo host consumes protocol package"
     },
     {
       "file": "packages/protocol/src/schemas.ts",
@@ -188,6 +181,55 @@
       "pattern": "panel",
       "excerpt": "  // Re-fit on hidden → visible transition (host panel toggled back).",
       "rationale": "Topic 53 component inline comment — generic host panel terminology"
+    },
+    {
+      "file": "packages/react-terminal/src/osc7-cwd.ts",
+      "line": 2,
+      "pattern": "Continuo",
+      "excerpt": " * OSC 7 cwd parser/binder migrated from Continuo `useTerminal.ts:309-322`.",
+      "rationale": "OSC7 cwd parser provenance comment"
+    },
+    {
+      "file": "packages/react-terminal/src/safeWrite.ts",
+      "line": 1,
+      "pattern": "Continuo",
+      "excerpt": "// xterm 写队列。Origin: Continuo `src/panels/Terminal/safeWrite.ts`",
+      "rationale": "safeWrite module provenance comment"
+    },
+    {
+      "file": "packages/server-node/src/shell-env/host-shell-policy.ts",
+      "line": 3,
+      "pattern": "Continuo",
+      "excerpt": " * host wrapper (e.g. Continuo IPC) calls explicitly to vet user-supplied shells.",
+      "rationale": "host shell policy consumer attribution"
+    },
+    {
+      "file": "packages/server-node/src/shell-env/host-shell-policy.ts",
+      "line": 4,
+      "pattern": "Continuo",
+      "excerpt": " * Moved from Continuo electron/shared/terminal-shells.ts in 2026-05-25 migration.",
+      "rationale": "host shell policy provenance comment"
+    },
+    {
+      "file": "packages/server-node/src/shell-env/integration.ts",
+      "line": 60,
+      "pattern": "panel",
+      "excerpt": "  // 代价:跨进程 OSC 7 自动 cwd 跟踪暂停 (panel 内 split 时新 leaf 不再继承",
+      "rationale": "shell-env integration panel cwd limitation comment"
+    },
+    {
+      "file": "packages/server-node/src/shell-env/integration.ts",
+      "line": 61,
+      "pattern": "panel",
+      "excerpt": "  // `cd /tmp` 后的 cwd,只继承 panel 启动 cwd)。topic 03 plan-v4 P0-1 cwd",
+      "rationale": "shell-env integration panel cwd limitation comment"
+    },
+    {
+      "file": "packages/shell-quote/src/index.ts",
+      "line": 2,
+      "pattern": "Continuo",
+      "excerpt": "// Origin: Continuo `src/lib/shell-quote.ts` (ported into @continuo-terminal/shell-quote",
+      "rationale": "shell-quote module provenance comment"
     }
   ]
 }

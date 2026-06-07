@@ -1,11 +1,6 @@
-// Terminal MCP — tool schemas.
-// Semantically mirrored from Continuo's electron/shared/mcp-terminal-schemas.ts
-// with local attribution and host-compatibility annotations (read-only reference).
-// Continuo source commit at mirror time:
-//   3d69148a39c92a2c96b17a3994d11b17659509b2
-//
-// Updates to Continuo's source require a follow-up sync topic in this repo;
-// do not hand-edit this file to diverge from the source.
+// Terminal MCP — tool schemas (source of truth for both repos).
+// Continuo consumes this package via file: link; `electron/shared/mcp-terminal-schemas.ts` is a single-line re-export mirror that auto-tracks this file.
+// Update this file when adding / extending MCP tool schemas; Continuo will pick up the change on next `pnpm install --offline`.
 
 import { z } from 'zod';
 
@@ -19,6 +14,7 @@ export const MCP_TOOL_PRESS_KEY = 'terminal.press_key';
 export const MCP_TOOL_READ_OUTPUT = 'terminal.read_output';
 export const MCP_TOOL_KILL = 'terminal.kill';
 export const MCP_TOOL_RESIZE = 'terminal.resize';
+export const MCP_TOOL_AWAIT_STOP_HOOK = 'terminal.await_stop_hook';
 
 // ── list_sessions ──────────────────────────────────────────────
 
@@ -109,6 +105,8 @@ export const createSessionInputSchema = z
     env: z.record(z.string(), z.string()).optional(),
     /** spawn 后 delay 200ms(Windows 600)键入此命令 + \n. */
     autorun: z.string().optional(),
+    install_stop_hook: z.boolean().optional(),
+    include_raw: z.boolean().optional(),
     /**
      * Optional attach hint. **Not consumed by server-node 0.1.x** — see
      * `attachTargetSchema` JSDoc above for the forward-compatibility note.
@@ -124,11 +122,37 @@ export const createSessionOutputSchema = z
     session_id: z.string().min(1),
     /** PTY child pid (when available; node-pty exposes pid on most platforms). */
     pid: z.number().int().optional(),
+    stop_hook_installed: z.boolean().optional(),
   })
   .strict();
 
 export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
 export type CreateSessionOutput = z.infer<typeof createSessionOutputSchema>;
+
+export const awaitStopHookInputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    timeout_sec: z.number().int().positive().max(600).optional().default(60),
+    include_raw: z.boolean().optional().default(false),
+  })
+  .strict();
+
+export const awaitStopHookOutputSchema = z
+  .object({
+    status: z.enum(['stop', 'timeout']),
+    session_id: z.string(),
+    cli_session_id: z.string().nullable(),
+    turn_id: z.string().nullable(),
+    cwd: z.string().nullable(),
+    transcript_path: z.string().nullable(),
+    last_assistant_message: z.string().nullable(),
+    elapsed_ms: z.number(),
+    raw: z.record(z.string(), z.unknown()).nullable().optional(),
+  })
+  .strict();
+
+export type AwaitStopHookInput = z.infer<typeof awaitStopHookInputSchema>;
+export type AwaitStopHookOutput = z.infer<typeof awaitStopHookOutputSchema>;
 
 // ── send_input(P3)─────────────────────────────────────────────
 

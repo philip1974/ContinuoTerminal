@@ -6,7 +6,10 @@ vi.mock('@xterm/xterm', () => {
   // Topic 53: Terminal component now uses attachCustomKeyEventHandler for
   // shared key-mapping (Shift+Enter → ESC+CR). Mock needs to expose it +
   // cols/rows reads for terminal.resize wire.
-  const mocks = {
+  // Unicode11 wiring: Terminal sets `unicode.activeVersion = '11'`, so the
+  // mock must expose a writable unicode service slot (xterm-shape only —
+  // assignment is the only contract Terminal exercises).
+  const makeMocks = () => ({
     cols: 80,
     rows: 24,
     onData: vi.fn(() => ({ dispose: vi.fn() })),
@@ -15,12 +18,27 @@ vi.mock('@xterm/xterm', () => {
     dispose: vi.fn(),
     loadAddon: vi.fn(),
     attachCustomKeyEventHandler: vi.fn(),
-  };
-  return { Terminal: vi.fn().mockImplementation(() => mocks), __mocks: mocks };
+    unicode: { activeVersion: '6' as string },
+  });
+  return { Terminal: vi.fn().mockImplementation(() => makeMocks()) };
 });
 
 vi.mock('@xterm/addon-fit', () => ({
   FitAddon: vi.fn().mockImplementation(() => ({ fit: vi.fn(), activate: vi.fn(), dispose: vi.fn() })),
+}));
+
+vi.mock('@xterm/addon-unicode11', () => ({
+  Unicode11Addon: vi.fn().mockImplementation(() => ({ activate: vi.fn(), dispose: vi.fn() })),
+}));
+
+// Mirrors Continuo main repo's useTerminal test mock (onContextLoss callback
+// kept available so the dispose-on-loss wire still type-checks at runtime).
+vi.mock('@xterm/addon-webgl', () => ({
+  WebglAddon: vi.fn().mockImplementation(() => ({
+    activate: vi.fn(),
+    onContextLoss: vi.fn(),
+    dispose: vi.fn(),
+  })),
 }));
 
 // Topic 53: ResizeObserver isn't in jsdom; stub it as no-op.

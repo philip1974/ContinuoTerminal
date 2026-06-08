@@ -1,5 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { FitAddon } from '@xterm/addon-fit';
+import { Unicode11Addon } from '@xterm/addon-unicode11';
+import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal as XTerm } from '@xterm/xterm';
 import type { ReadOutputOutput } from '@continuo-terminal/protocol';
 
@@ -63,10 +65,41 @@ export function Terminal({
     // xterm.js: cols/rows are constructor-init options, ITerminalOptions
     // (passed via .options later) doesn't include them — merged as untyped
     // here then cast to satisfy the constructor signature.
-    const terminal = new XTerm({ cols, rows, ...(xtermOptions ?? {}) } as ConstructorParameters<typeof XTerm>[0]);
+    // allowProposedApi forced true (after host spread) so Unicode11Addon's
+    // unicode.activeVersion mutation is permitted regardless of host opts.
+    const terminal = new XTerm({
+      cols,
+      rows,
+      ...(xtermOptions ?? {}),
+      allowProposedApi: true,
+    } as ConstructorParameters<typeof XTerm>[0]);
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
+    // Unicode 11 width table: default xterm table is Unicode 6 and disagrees
+    // with modern glibc/musl wcwidth on ambiguous-width / new emoji / CJK
+    // extension ranges, causing column drift between PTY-side cursor advance
+    // and renderer-side cell allocation. Load BEFORE .open() so the first
+    // write uses the correct width table.
+    const unicode11 = new Unicode11Addon();
+    terminal.loadAddon(unicode11);
+    terminal.unicode.activeVersion = '11';
     terminal.open(container);
+    // WebGL renderer: default DOM renderer simulates CJK double-width via
+    // letter-spacing, whose accumulated error overflows row clientWidth and
+    // triggers row's overflow:hidden — clipping the trailing CJK glyphs
+    // (only "fixed" by resize-triggered redraw). WebGL draws on a precise
+    // cell grid and avoids the letter-spacing path. Mirrors Continuo main
+    // repo's useTerminal.ts:248-254 pattern. Silent fallback to DOM on
+    // context loss / init failure (terminal still usable, CJK clipping
+    // edge case may resurface).
+    try {
+      const webgl = new WebglAddon();
+      webgl.onContextLoss(() => webgl.dispose());
+      terminal.loadAddon(webgl);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[continuo-terminal] WebGL renderer init failed, falling back to DOM:', err);
+    }
 
     // Topic 53: install shared key-mapping. shouldSkipXtermKey returns false to
     // let xterm handle the keydown (Shift+(Cmd|Ctrl)+Enter case is for host

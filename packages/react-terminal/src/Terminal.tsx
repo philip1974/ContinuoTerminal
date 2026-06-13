@@ -5,6 +5,7 @@ import { WebglAddon } from '@xterm/addon-webgl';
 import { Terminal as XTerm } from '@xterm/xterm';
 import type { ReadOutputOutput } from '@continuo-terminal/protocol';
 
+import { installAtlasGuards } from './atlas-guards.js';
 import {
   applyMappedKeyOnKeydown,
   consumeMappedKeyOnData,
@@ -100,6 +101,9 @@ export function Terminal({
       // eslint-disable-next-line no-console
       console.warn('[continuo-terminal] WebGL renderer init failed, falling back to DOM:', err);
     }
+    // GPU atlas recovery on bg→fg / DPR / soft context loss (no-op on DOM
+    // renderer). See atlas-guards.ts for failure-mode rationale.
+    const atlasGuards = installAtlasGuards(terminal);
 
     // Topic 53: install shared key-mapping. shouldSkipXtermKey returns false to
     // let xterm handle the keydown (Shift+(Cmd|Ctrl)+Enter case is for host
@@ -155,6 +159,7 @@ export function Terminal({
 
     return () => {
       resizeObserver.disconnect();
+      atlasGuards.dispose();
       onDataDisposable.dispose();
       fitAddon.dispose();
       terminal.dispose();

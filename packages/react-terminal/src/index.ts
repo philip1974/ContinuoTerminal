@@ -45,3 +45,9 @@ export {
   parseOsc7Cwd,
   registerOsc7Cwd,
 } from './osc7-cwd.js';
+
+// atlas-guards
+export {
+  type AtlasGuardsDisposable,
+  installAtlasGuards,
+} from './atlas-guards.js';

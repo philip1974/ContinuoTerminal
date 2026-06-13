@@ -18,6 +18,9 @@ vi.mock('@xterm/xterm', () => {
     dispose: vi.fn(),
     loadAddon: vi.fn(),
     attachCustomKeyEventHandler: vi.fn(),
+    // installAtlasGuards feature-detects this method; expose a vi.fn so the
+    // guards wire (lifetime + cleanup test path) is exercised.
+    clearTextureAtlas: vi.fn(),
     unicode: { activeVersion: '6' as string },
   });
   return { Terminal: vi.fn().mockImplementation(() => makeMocks()) };

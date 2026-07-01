@@ -287,11 +287,19 @@ describe('react-terminal Terminal component', () => {
   // not be silently swallowed.
   it('routes an isError result from send_text to onError', async () => {
     const onError = vi.fn();
+    // Only send_text fails — resize (fired by the mount-time doFit) and other
+    // calls must succeed, otherwise onError would fire for those too and the
+    // count would be non-deterministic (mount fit runs via rAF/ResizeObserver).
     const adapter: MCPClientAdapter = {
-      callTool: vi.fn(async () => ({
-        isError: true,
-        content: [{ type: 'text', text: '{"error":"SESSION_NOT_FOUND","message":"gone"}' }],
-      })) as unknown as MCPClientAdapter['callTool'],
+      callTool: vi.fn(async (name: string) => {
+        if (name === 'terminal.send_text') {
+          return {
+            isError: true,
+            content: [{ type: 'text', text: '{"error":"SESSION_NOT_FOUND","message":"gone"}' }],
+          };
+        }
+        return { structuredContent: {} };
+      }) as unknown as MCPClientAdapter['callTool'],
     };
 
     render(<TerminalComponent sessionId="s1" adapter={adapter} pollIntervalMs={false} onError={onError} />);

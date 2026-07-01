@@ -71,7 +71,11 @@ describe('shell integration env real PTY behavior', () => {
       const prepared = await prepareShellIntegrationEnv('/bin/bash', minimalBaseEnv(home));
       const rcfile = prepared.env.BASH_ENV;
       if (!rcfile) throw new Error('BASH_ENV missing');
-      const pty = spawn('/bin/bash', ['--rcfile', rcfile, '-i'], {
+      // Spawn with the helper-supplied args (not hardcoded), proving the helper
+      // itself provides the `--rcfile` bash needs — interactive bash ignores
+      // BASH_ENV, so env alone would never load the OSC 7 snippet.
+      expect(prepared.args).toEqual(['--rcfile', rcfile, '-i']);
+      const pty = spawn('/bin/bash', prepared.args, {
         env: prepared.env,
         cols: 80,
         rows: 24,

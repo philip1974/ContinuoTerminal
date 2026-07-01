@@ -2,7 +2,7 @@
 
 Standalone Node MCP server that owns the PTY runtime side of the
 `continuo-terminal` protocol. Spawns shells through `node-pty`, exposes
-the seven `terminal.*` MCP tools over stdio, and ships with a stable
+the eight `terminal.*` MCP tools over stdio, and ships with a stable
 v0.1.0 surface.
 
 ## Quick start
@@ -143,7 +143,7 @@ is provided, the M3 unauthenticated path is preserved (backwards compat).
 A3 mini-topic of ADR 0005 wires `@continuo-terminal/host` token authority
 into these hooks. Until then, callers can implement hooks directly.
 
-## Tools (7 MCP)
+## Tools (8 MCP)
 
 These descriptions mirror the `TOOL_DESCRIPTIONS` table in `src/server.ts`
 verbatim; see the JSDoc in `@continuo-terminal/protocol` for full schema
@@ -164,10 +164,17 @@ shapes.
   arrows / etc.) via the protocol's `KEY_BYTES` mapping.
 - `terminal.read_output` — Read buffered output. Use the returned
   `next_seq` as `since_seq` on the next call (inclusive cursor); request
-  `strip_ansi: true` to flatten control sequences.
+  `strip_ansi: true` to flatten control sequences in `lines` only — the
+  `data` field is always the raw byte stream (use it for lossless TUI replay).
 - `terminal.kill` — Send a single signal (`SIGINT` / `SIGTERM` /
-  `SIGKILL`, defaults to `SIGTERM`). No automatic escalation; the caller
-  retries with a stronger signal if the process does not exit.
+  `SIGKILL`, defaults to `SIGTERM`), then immediately drop the session.
+  Fire-and-forget: no automatic escalation and no retry — a second kill on
+  the same session_id is a silent no-op even if the process ignored the
+  signal, so pass `SIGKILL` on the first call to force termination.
+- `terminal.resize` — Resize a session's PTY columns + rows. Use on viewport
+  resize / xterm fit-addon events to keep PTY size in sync with renderer
+  cols/rows so TUI apps (Claude Code, Codex CLI, htop, vim) reflow correctly.
+  node-pty resize errors (`EBADF` / `ENOTTY` / `EINVAL`) propagate as `isError`.
 
 ## SessionManager Runtime APIs
 

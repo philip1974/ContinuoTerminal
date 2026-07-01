@@ -7,14 +7,34 @@ export type ComposeAgentEnvInput = CreateAgentEnvInput & {
   token: string;
 };
 
+/**
+ * Serialize metadata into `MCP_META_<KEY>` env vars, upper-casing the key and
+ * replacing every non-`[A-Z0-9_]` char with `_` for env-var safety.
+ *
+ * Because that normalization is lossy, distinct source keys can map to the same
+ * env var (e.g. `build-id`, `build_id`, and `build id` all become
+ * `MCP_META_BUILD_ID`). Rather than silently drop all but the last value —
+ * leaving the agent with incomplete, undiagnosable metadata — this throws so the
+ * colliding keys surface at compose time (metadata keys are host-authored, not
+ * runtime input, so a collision is a naming bug to fix).
+ */
 function metadataEntries(metadata: Record<string, string> | undefined): Record<string, string> {
   if (!metadata) return {};
-  return Object.fromEntries(
-    Object.entries(metadata).map(([key, value]) => [
-      `MCP_META_${key.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}`,
-      value,
-    ]),
-  );
+  const entries: Record<string, string> = {};
+  const sourceKeyForEnvKey: Record<string, string> = {};
+  for (const [key, value] of Object.entries(metadata)) {
+    const envKey = `MCP_META_${key.toUpperCase().replace(/[^A-Z0-9_]/g, '_')}`;
+    const priorKey = sourceKeyForEnvKey[envKey];
+    if (priorKey !== undefined) {
+      throw new Error(
+        `composeAgentEnv: metadata keys ${JSON.stringify(priorKey)} and ${JSON.stringify(key)} ` +
+        `both normalize to the env var ${envKey} — rename one so no metadata is silently dropped.`,
+      );
+    }
+    sourceKeyForEnvKey[envKey] = key;
+    entries[envKey] = value;
+  }
+  return entries;
 }
 
 export function composeAgentEnv({

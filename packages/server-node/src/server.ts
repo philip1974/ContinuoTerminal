@@ -41,13 +41,13 @@ import type { AuthContext, AuthorizationDecision, AuthorizeToolCall } from './au
 // these strings and reality. Verify before changing the schema or
 // SessionManager that the matching line here is updated.
 const TOOL_DESCRIPTIONS = {
-  [MCP_TOOL_CREATE_SESSION]: 'Start a new pseudo-terminal session with optional cwd, shell, cols, rows, autorun, and agentLabel. (A `target` field is accepted on the schema for forward compatibility but is currently ignored by server-node — see protocol JSDoc for the host-routing roadmap.)',
+  [MCP_TOOL_CREATE_SESSION]: 'Start a new pseudo-terminal session with optional cwd, shell, cols, rows, autorun, and agentLabel. (A `target` field is accepted on the schema for forward compatibility but is currently ignored by server-node — see protocol JSDoc for the host-routing roadmap. The `install_stop_hook` / `include_raw` inputs and `stop_hook_installed` output are likewise reserved for the stop-hook roadmap: server-node 0.1.x neither installs a Stop hook nor advertises terminal.await_stop_hook, so passing them has no effect.)',
   [MCP_TOOL_LIST_SESSIONS]: 'List all active terminal sessions in this server.',
   [MCP_TOOL_SEND_INPUT]: "Write a UTF-8 text string to a session's PTY stdin (no encoding transform; bytes that are not valid UTF-8 cannot be transported via this tool — use terminal.press_key for special keys).",
   [MCP_TOOL_SEND_TEXT]: "Write text to a session's PTY stdin verbatim (no newline normalization; pair with terminal.press_key for Enter).",
   [MCP_TOOL_PRESS_KEY]: 'Press a special key (enter/tab/ctrl_c/arrows/...) in a session.',
   [MCP_TOOL_READ_OUTPUT]: 'Read accumulated output from a session, with optional since_seq cursor and ANSI strip.',
-  [MCP_TOOL_KILL]: 'Terminate a session by sending the requested signal (SIGINT / SIGTERM / SIGKILL; defaults to SIGTERM). No automatic escalation — the caller is responsible for retrying with a stronger signal if the process does not exit.',
+  [MCP_TOOL_KILL]: 'Terminate a session by sending the requested signal (SIGINT / SIGTERM / SIGKILL; defaults to SIGTERM), then immediately drop the session. Fire-and-forget: there is no automatic escalation and no retry — the session is removed as soon as the signal is sent, so a second kill on the same session_id is a silent no-op (returns {}) even if the process ignored the signal and is still running. To force termination of a target that may ignore SIGTERM/SIGINT, pass signal "SIGKILL" on the first call. (The library-level SessionManager.kill API also offers a gracePeriodMs SIGTERM→SIGKILL auto-escalation, intentionally not exposed on the MCP schema.)',
   [MCP_TOOL_RESIZE]: "Resize a session's PTY columns + rows. Use on viewport resize / xterm fit-addon events to keep PTY size in sync with renderer cols/rows so TUI apps (Claude Code, Codex CLI, htop, vim) can reflow correctly. node-pty resize errors (EBADF / ENOTTY / EINVAL) propagate as isError.",
 } as const;
 

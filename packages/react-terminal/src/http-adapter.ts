@@ -16,10 +16,13 @@ import type { MCPClientAdapter } from './types.js';
  * Optional bearer token wires A3 host auth(passed to A2 server `authenticateRequest`
  * hook;see `examples/standalone-cli-host/` for a full-auth host setup)。
  *
- * SSE(`text/event-stream`)response bodies are accepted but consumed as a
- * single concatenated `data:` payload — the SDK Streamable HTTP transport may
- * upgrade individual responses to SSE for streaming;current implementation
- * collects all `data:` frames and JSON-parses the final aggregate body。
+ * SSE(`text/event-stream`)response bodies are parsed per the SSE spec: lines
+ * are grouped into events on blank lines, the `data:` lines within one event are
+ * concatenated with `\n`, and each event's payload is JSON-parsed. The adapter
+ * returns the JSON-RPC message whose `id` matches this request (falling back to
+ * the first message carrying `result`/`error`), so a stream that interleaves
+ * notification/progress frames before the response — or splits a large response
+ * across multiple `data:` lines — is handled correctly。
  *
  * No `subscribeOutput` implementation — output streaming uses the polling
  * fallback in `<Terminal>` via `pollIntervalMs`(see `Terminal.tsx`)。Future
@@ -66,28 +69,63 @@ function buildHeaders(token: string | undefined): Record<string, string> {
 }
 
 /**
- * Parse SSE-style response body — extracts the first non-empty `data:` payload
- * and returns it。SDK Streamable HTTP may return either raw JSON OR
- * `text/event-stream` framing for the response;both contain a single
- * JSON-RPC response payload。
+ * Split an SSE body into per-event `data` payloads. Events are separated by
+ * blank lines; within one event the `data:` lines are concatenated with `\n`
+ * (per the SSE spec, stripping a single leading space after the colon). Other
+ * fields (`event:`, `id:`, `:` comments, …) are ignored.
  */
-function extractJsonRpcBody(rawBody: string, contentType: string): JsonRpcResponse {
-  if (contentType.includes('text/event-stream')) {
-    // SSE frames:`data: <json>\n\n` repeated。Take the first `data:` value
-    // with content(SDK Streamable HTTP returns request response as a single
-    // SSE event)。
-    const lines = rawBody.split('\n');
-    for (const line of lines) {
-      if (line.startsWith('data:')) {
-        const payload = line.slice('data:'.length).trim();
-        if (payload.length > 0) {
-          return JSON.parse(payload) as JsonRpcResponse;
-        }
-      }
+function sseDataEvents(rawBody: string): string[] {
+  const events: string[] = [];
+  let dataLines: string[] = [];
+  const flush = (): void => {
+    if (dataLines.length > 0) {
+      events.push(dataLines.join('\n'));
+      dataLines = [];
     }
-    throw new Error('SSE response body had no parseable `data:` frame');
+  };
+  for (const line of rawBody.split(/\r?\n/)) {
+    if (line === '') {
+      flush(); // blank line dispatches the current event
+      continue;
+    }
+    if (line.startsWith('data:')) {
+      const value = line.slice('data:'.length);
+      dataLines.push(value.startsWith(' ') ? value.slice(1) : value);
+    }
   }
-  return JSON.parse(rawBody) as JsonRpcResponse;
+  flush(); // trailing event without a final blank line
+  return events;
+}
+
+/**
+ * Parse the JSON-RPC response out of a raw body (plain JSON or SSE). For SSE,
+ * returns the message whose `id` matches `expectedId`, else the first message
+ * carrying `result`/`error` — never merely the first `data:` frame, which may be
+ * a notification/progress event or a partial line.
+ */
+function extractJsonRpcBody(
+  rawBody: string,
+  contentType: string,
+  expectedId: number | string,
+): JsonRpcResponse {
+  if (!contentType.includes('text/event-stream')) {
+    return JSON.parse(rawBody) as JsonRpcResponse;
+  }
+  let firstResponse: JsonRpcResponse | undefined;
+  for (const data of sseDataEvents(rawBody)) {
+    let msg: JsonRpcResponse;
+    try {
+      msg = JSON.parse(data) as JsonRpcResponse;
+    } catch {
+      continue; // skip non-JSON frames (e.g. keep-alive comments)
+    }
+    const isResponse = msg.result !== undefined || msg.error !== undefined;
+    if (!isResponse) continue; // skip notifications / progress frames
+    if (msg.id === expectedId) return msg;
+    firstResponse ??= msg;
+  }
+  if (firstResponse !== undefined) return firstResponse;
+  throw new Error('SSE response body had no parseable JSON-RPC response frame');
 }
 
 /**
@@ -132,7 +170,7 @@ export function createHttpMCPClientAdapter({
       }
       const contentType = resp.headers.get('content-type') ?? 'application/json';
       const rawBody = await resp.text();
-      const rpc = extractJsonRpcBody(rawBody, contentType);
+      const rpc = extractJsonRpcBody(rawBody, contentType, id);
       if (rpc.error) {
         throw new Error(
           `MCP error ${rpc.error.code ?? 'unknown'}: ${rpc.error.message ?? 'unknown error'}`,

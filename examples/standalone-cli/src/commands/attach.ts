@@ -1,6 +1,7 @@
 import { Command } from 'commander';
 
 import { readResult, safeKill, withClient } from '../mcp-client.js';
+import { parsePositiveInt } from '../parse-args.js';
 
 interface CreateSessionResult {
   session_id: string;
@@ -9,12 +10,27 @@ interface CreateSessionResult {
 
 interface ReadOutputResult {
   lines: string[];
+  // Raw byte stream (protocol readOutputOutputSchema). Optional here only for
+  // back-compat with pre-`data` sidecars; current server-node always sends it.
+  data?: string;
   next_seq: number;
   truncated: boolean;
 }
 
 const POLL_DEFAULT_MS = 200;
 const CTRL_C_BYTE = 0x03;
+
+/**
+ * Choose what to write to stdout for one read_output result. Interactive attach
+ * requests `strip_ansi: false` precisely to render a real TUI, so it must emit
+ * the raw `data` stream when present — `\r`-only cursor updates (spinner frames,
+ * in-place redraws) are corrupted by the split-into-lines + rejoin-with-`\n`
+ * path. Only fall back to `lines` for older sidecars that don't send `data`.
+ */
+export function attachOutputChunk(parsed: Pick<ReadOutputResult, 'lines' | 'data'>): string {
+  if (parsed.data !== undefined && parsed.data.length > 0) return parsed.data;
+  return parsed.lines.map((line) => `${line}\n`).join('');
+}
 
 export function register(program: Command): void {
   program
@@ -23,7 +39,7 @@ export function register(program: Command): void {
     .option('--session-id <id>', 'session id to attach (if omitted, creates a new session)')
     .option('--cwd <path>', 'cwd when creating a new session')
     .option('--shell <path>', 'shell path when creating a new session')
-    .option('--poll-ms <ms>', 'output poll interval in milliseconds', (v: string) => Number.parseInt(v, 10), POLL_DEFAULT_MS)
+    .option('--poll-ms <ms>', 'output poll interval in milliseconds (positive integer)', parsePositiveInt, POLL_DEFAULT_MS)
     .action(async (opts: { sessionId?: string; cwd?: string; shell?: string; pollMs: number }) => {
       // Safety net: even if anything below throws or process.exit is called
       // unexpectedly, leave the user's terminal in a usable state.
@@ -81,11 +97,9 @@ export function register(program: Command): void {
               arguments: { session_id: sid, since_seq: sinceSeq, strip_ansi: false },
             });
             const parsed = readResult<ReadOutputResult>(raw);
-            if (parsed.lines.length > 0) {
-              for (const line of parsed.lines) {
-                process.stdout.write(line);
-                process.stdout.write('\n');
-              }
+            const chunk = attachOutputChunk(parsed);
+            if (chunk.length > 0) {
+              process.stdout.write(chunk);
               sinceSeq = parsed.next_seq;
             }
           } catch (err) {

@@ -31,6 +31,9 @@ the layer diagram and dependency graph. In short:
 - `packages/server-node` — stdio MCP server with node-pty PTY sessions
 - `packages/react-terminal` — React + xterm component with an abstract
   `MCPClientAdapter` interface
+- `packages/host` — host abstraction: agent-host bootstrap, `TokenStore`
+  bearer auth, agent env composition, transport wiring
+- `packages/shell-quote` — host-agnostic POSIX/cmd/PowerShell safe quoting
 - `examples/standalone-cli` — Node CLI demoing the server over stdio
 - `examples/minimal-react-host` — Vite + React host using a mock adapter
 - `tests/contract` — cross-package public-surface contract tests
@@ -47,13 +50,15 @@ pnpm install
 # typecheck + test the whole workspace
 pnpm typecheck
 pnpm test
+pnpm verify:contract   # cross-package contract typecheck + suite (also gated in CI)
 
 # run the standalone CLI end-to-end demo
 pnpm exec tsx examples/standalone-cli/src/cli.ts demo
 ```
 
-Every PR must keep `pnpm typecheck` and `pnpm test` green on both
-runners that CI exercises (`ubuntu-latest`, `macos-latest`, Node 24).
+Every PR must keep `pnpm typecheck`, `pnpm test`, and `pnpm verify:contract`
+green on both runners that CI exercises (`ubuntu-latest`, `macos-latest`,
+Node 24).
 
 ## Branching
 

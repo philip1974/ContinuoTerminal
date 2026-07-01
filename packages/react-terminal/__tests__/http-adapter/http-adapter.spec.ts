@@ -110,6 +110,45 @@ describe('createHttpMCPClientAdapter', () => {
     await expect(adapter.callTool('x', {})).rejects.toThrow(/missing `result`/);
   });
 
+  // Polish round-11: SSE parsing must follow the spec, not "first data: line".
+  it('aggregates a response split across multiple data: lines in one SSE event', async () => {
+    const sseBody =
+      'event: message\n' +
+      'data: {"jsonrpc":"2.0","id":1,\n' +
+      'data: "result":{"lines":["a","b"],"next_seq":7}}\n' +
+      '\n';
+    const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () =>
+      new Response(sseBody, { status: 200, headers: { 'content-type': 'text/event-stream' } }),
+    );
+    const adapter = createHttpMCPClientAdapter({
+      endpoint: 'http://localhost:9999/mcp',
+      fetch: fetchSpy as unknown as typeof globalThis.fetch,
+    });
+    const result = await adapter.callTool<{ lines: string[]; next_seq: number }>('terminal.read_output', { session_id: 'x' });
+    expect(result).toEqual({ lines: ['a', 'b'], next_seq: 7 });
+  });
+
+  it('skips a leading notification frame and returns the JSON-RPC response', async () => {
+    // A notification/progress event arrives before the actual response event;
+    // the old "first data: frame" parse would return the notification (no result).
+    const sseBody =
+      'event: message\n' +
+      'data: {"jsonrpc":"2.0","method":"notifications/progress","params":{"progress":0.5}}\n' +
+      '\n' +
+      'event: message\n' +
+      'data: {"jsonrpc":"2.0","id":1,"result":{"ok":true}}\n' +
+      '\n';
+    const fetchSpy = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(async () =>
+      new Response(sseBody, { status: 200, headers: { 'content-type': 'text/event-stream' } }),
+    );
+    const adapter = createHttpMCPClientAdapter({
+      endpoint: 'http://localhost:9999/mcp',
+      fetch: fetchSpy as unknown as typeof globalThis.fetch,
+    });
+    const result = await adapter.callTool<{ ok: boolean }>('terminal.list_sessions', {});
+    expect(result).toEqual({ ok: true });
+  });
+
   it('throws when no fetch is available', () => {
     expect(() =>
       createHttpMCPClientAdapter({

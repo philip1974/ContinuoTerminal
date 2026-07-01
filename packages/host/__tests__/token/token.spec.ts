@@ -39,6 +39,47 @@ describe('TokenStore', () => {
     });
   });
 
+  // Security: `readonly` on Token is compile-time only. issue()/validate() must
+  // NOT hand back a live reference to internal auth state — otherwise a caller
+  // could mutate expiresAt (TTL bypass) or subject/scope (privilege escalation)
+  // at runtime and corrupt what validate()/pruneExpired() trust.
+  it('returns frozen, tamper-proof token metadata from issue() and validate()', () => {
+    const store = new TokenStore();
+    const issued = store.issue({ subject: 'agent-a', scope: 'demo', metadata: { role: 'primary' } });
+
+    expect(Object.isFrozen(issued.token)).toBe(true);
+    expect(Object.isFrozen(issued.token.metadata)).toBe(true);
+
+    // Runtime tamper attempts are rejected (frozen object, strict-mode ESM).
+    expect(() => {
+      (issued.token as { expiresAt?: number }).expiresAt = Date.now() + 1_000_000_000;
+    }).toThrow();
+    expect(() => {
+      (issued.token as { subject: string }).subject = 'attacker';
+    }).toThrow();
+
+    const validated = store.validate(issued.value);
+    expect(validated).not.toBeNull();
+    expect(Object.isFrozen(validated)).toBe(true);
+    expect(validated?.subject).toBe('agent-a');
+    expect(validated?.expiresAt).toBe(Date.now() + 30 * 60 * 1000);
+  });
+
+  it('cannot bypass TTL by mutating a previously issued token object', () => {
+    const store = new TokenStore();
+    const issued = store.issue({ subject: 'agent-a', ttlMs: 1 });
+
+    // Attempt to extend lifetime via the returned reference — must not take.
+    try {
+      (issued.token as { expiresAt?: number }).expiresAt = Date.now() + 1_000_000_000;
+    } catch {
+      /* frozen → throws in strict mode; either way internal state is intact */
+    }
+
+    vi.advanceTimersByTime(2);
+    expect(store.validate(issued.value)).toBeNull(); // still expired despite tamper
+  });
+
   it('stores only digest and metadata internally, never plaintext token value', () => {
     const store = new TokenStore();
     const issued = store.issue({ subject: 'agent-a' });

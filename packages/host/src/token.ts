@@ -61,15 +61,21 @@ export class TokenStore {
     const digest = createHash('sha256').update(value).digest();
     const issuedAt = Date.now();
     const expiresAt = ttl === null ? undefined : issuedAt + ttl;
-    const metadata: Token = {
+    // Freeze the metadata (and the nested metadata record) before it is both
+    // stored and returned. `readonly` is compile-time only — without freezing,
+    // the same object reference is shared with the caller, who could mutate
+    // `expiresAt` (bypassing TTL), `subject`/`scope` (privilege escalation), or
+    // the nested metadata at runtime and corrupt the internal auth state that
+    // validate()/pruneExpired() rely on.
+    const metadata: Token = Object.freeze({
       tokenId,
       subject: input.subject,
       ...(input.scope !== undefined ? { scope: input.scope } : {}),
       ...(input.workspaceRoot !== undefined ? { workspaceRoot: input.workspaceRoot } : {}),
-      ...(input.metadata !== undefined ? { metadata: { ...input.metadata } } : {}),
+      ...(input.metadata !== undefined ? { metadata: Object.freeze({ ...input.metadata }) } : {}),
       issuedAt,
       ...(expiresAt !== undefined ? { expiresAt } : {}),
-    };
+    });
     this.entries.set(tokenId, { digest, metadata });
     return { value, token: metadata };
   }

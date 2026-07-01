@@ -12,7 +12,8 @@ import {
   createMappedKeyState,
   shouldSkipXtermKey,
 } from './key-mapping.js';
-import { parseCallToolResult } from './parse-result.js';
+import { parseCallToolResult, throwIfToolError } from './parse-result.js';
+import { disposeQueue, safeWrite } from './safeWrite.js';
 import type { TerminalProps } from './types.js';
 
 /**
@@ -53,6 +54,10 @@ export function Terminal({
   const inFlightRef = useRef(false);
   const onErrorRef = useRef(onError);
   const hiddenRef = useRef(hidden);
+  // Latest fit-and-resize closure, exposed so the hidden→visible effect can
+  // reuse the SAME fit + terminal.resize logic as the ResizeObserver path
+  // (see the hidden→visible effect below).
+  const doFitRef = useRef<() => void>(() => {});
 
   onErrorRef.current = onError;
   hiddenRef.current = hidden;
@@ -120,6 +125,9 @@ export function Terminal({
       const outgoing = consumeMappedKeyOnData(mappedKeyState, data);
       adapter
         .callTool('terminal.send_text', { session_id: sessionId, text: outgoing })
+        // A tool-level failure (session gone / not authorized) resolves as
+        // { isError: true }, not a reject — surface it via onError too.
+        .then(throwIfToolError)
         .catch((err: unknown) => {
           onErrorRef.current?.(err);
         });
@@ -136,12 +144,15 @@ export function Terminal({
               cols: terminal.cols,
               rows: terminal.rows,
             })
+            // resize failures resolve as { isError: true }; route to onError.
+            .then(throwIfToolError)
             .catch((err: unknown) => onErrorRef.current?.(err));
         }
       } catch (err) {
         onErrorRef.current?.(err);
       }
     };
+    doFitRef.current = doFit;
     // Initial fit; if container has no layout yet, retry on next frame.
     if (container.clientWidth > 0 && container.clientHeight > 0) {
       doFit();
@@ -161,6 +172,9 @@ export function Terminal({
       resizeObserver.disconnect();
       atlasGuards.dispose();
       onDataDisposable.dispose();
+      // Drop any queued safeWrite chunks + timer before disposing the terminal,
+      // otherwise a throttled write could fire against a disposed xterm.
+      disposeQueue(terminal);
       fitAddon.dispose();
       terminal.dispose();
       terminalRef.current = null;
@@ -168,14 +182,18 @@ export function Terminal({
     };
   }, [adapter, cols, rows, sessionId, xtermOptions]);
 
-  // Re-fit on hidden → visible transition (host panel toggled back).
+  // Re-fit on hidden → visible transition (host panel toggled back). Must run
+  // the full fit + terminal.resize (doFit), not just fitAddon.fit(): if the
+  // container was resized while hidden, the local xterm picks up the new
+  // cols/rows here but the backend PTY would stay at the old size (the
+  // ResizeObserver is skipped while hidden and may not fire again), so TUI
+  // apps reflow against stale dimensions until the next manual resize.
   useEffect(() => {
     if (hidden) return;
-    const fit = fitAddonRef.current;
-    if (!fit) return;
+    if (!fitAddonRef.current) return;
     requestAnimationFrame(() => {
       try {
-        fit.fit();
+        doFitRef.current();
       } catch {
         // dispose race during hide/show — ignore
       }
@@ -189,10 +207,18 @@ export function Terminal({
   useEffect(() => {
     if (typeof adapter.subscribeOutput === 'function') {
       let cancelled = false;
-      const unsubscribe = adapter.subscribeOutput(sessionId, (lines, nextSeq) => {
+      const unsubscribe = adapter.subscribeOutput(sessionId, (lines, nextSeq, data) => {
         if (cancelled) return;
-        if (lines.length > 0) {
-          terminalRef.current?.write(lines.join('\r\n'));
+        const term = terminalRef.current;
+        if (term) {
+          // Prefer the raw byte stream (preserves \r-only cursor updates), same
+          // as the polling path; fall back to lines for adapters that don't
+          // supply `data`.
+          if (data !== undefined && data.length > 0) {
+            safeWrite(term, data);
+          } else if (lines.length > 0) {
+            safeWrite(term, lines.join('\r\n'));
+          }
         }
         sinceSeqRef.current = nextSeq;
       });
@@ -222,11 +248,14 @@ export function Terminal({
         });
         if (cancelled) return;
         const parsed = parseCallToolResult<ReadOutputOutput>(result);
-        if (parsed.data && parsed.data.length > 0) {
-          terminalRef.current?.write(parsed.data);
-        } else if (parsed.lines.length > 0) {
-          // Backwards-compat for sidecar versions < topic 51 that lack data
-          terminalRef.current?.write(parsed.lines.join('\r\n'));
+        const term = terminalRef.current;
+        if (term) {
+          if (parsed.data && parsed.data.length > 0) {
+            safeWrite(term, parsed.data);
+          } else if (parsed.lines.length > 0) {
+            // Backwards-compat for sidecar versions < topic 51 that lack data
+            safeWrite(term, parsed.lines.join('\r\n'));
+          }
         }
         sinceSeqRef.current = parsed.next_seq;
       } catch (err) {

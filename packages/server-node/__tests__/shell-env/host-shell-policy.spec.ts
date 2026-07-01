@@ -52,10 +52,17 @@ describe('host shell policy helpers', () => {
     expect(getDefaultShell()).toBe('/bin/zsh');
   });
 
-  it('T7 falls back when SHELL is not allowed on Unix', () => {
+  it('T7 falls back to /bin/sh when SHELL is not allowed on Unix', () => {
+    // /bin/sh 是 POSIX 必备,zsh 在多数 Linux 不存在(跨平台审计 P1)。
     process.env.SHELL = '/tmp/evil';
 
-    expect(getDefaultShell()).toBe('/bin/zsh');
+    expect(getDefaultShell()).toBe('/bin/sh');
+  });
+
+  it('T7b falls back to /bin/sh when SHELL is unset on Unix', () => {
+    delete process.env.SHELL;
+
+    expect(getDefaultShell()).toBe('/bin/sh');
   });
 
   it('T8 returns powershell.exe on Windows', () => {

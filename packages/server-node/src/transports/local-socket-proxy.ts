@@ -1,4 +1,4 @@
-import { connect, type Socket } from 'node:net';
+import { connect } from 'node:net';
 import process from 'node:process';
 import type { Readable, Writable } from 'node:stream';
 
@@ -35,17 +35,29 @@ export async function connectLocalSocketStdioProxy({
     socket.once('error', onError);
   });
 
+  let closed = false;
+  const teardown = (): void => {
+    if (closed) return;
+    closed = true;
+    stdin.unpipe(socket);
+    socket.unpipe(stdout);
+    if (!socket.destroyed) socket.destroy();
+  };
+
+  // Runtime error handler for the bridging phase. The connect-phase listener
+  // above is removed on 'connect', so without this a mid-stream socket error
+  // (ECONNRESET / EPIPE on server restart, crash, or disconnect — routine for
+  // a stdio↔socket bridge) would be an unhandled 'error' event and crash the
+  // proxy process. Tear the bridge down instead, leaving shutdown() a clean
+  // idempotent no-op.
+  socket.on('error', teardown);
+
   stdin.pipe(socket);
   socket.pipe(stdout);
 
-  let closed = false;
   return {
     shutdown: async () => {
-      if (closed) return;
-      closed = true;
-      stdin.unpipe(socket);
-      socket.unpipe(stdout);
-      if (!socket.destroyed) socket.destroy();
+      teardown();
       await new Promise<void>((resolve) => {
         if (socket.closed) {
           resolve();

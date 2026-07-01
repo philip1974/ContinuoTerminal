@@ -1,20 +1,17 @@
 import { Command } from 'commander';
 
 import { readResult, withClient } from '../mcp-client.js';
+import { parseNonNegativeInt } from '../parse-args.js';
 
 type ReadOutputResult = {
   lines: string[];
 };
 
-function parseInteger(value: string): number {
-  return Number.parseInt(value, 10);
-}
-
 export function register(program: Command): void {
   program
     .command('read-output')
     .requiredOption('--session-id <id>')
-    .option('--since-seq <n>', 'sequence cursor', parseInteger, 0)
+    .option('--since-seq <n>', 'sequence cursor (non-negative integer)', parseNonNegativeInt, 0)
     .option('--raw', 'do not strip ANSI escape sequences', false)
     .action(async (options: { sessionId: string; sinceSeq: number; raw: boolean }) => {
       await withClient(async (client) => {

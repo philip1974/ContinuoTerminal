@@ -15,8 +15,32 @@
 export type Osc7Disposable = Readonly<{ dispose: () => void }>;
 
 export type Osc7Options = Readonly<{
+  /**
+   * Hosts whose `file://<host>/path` OSC 7 payloads are accepted. Defaults to
+   * `['', 'localhost']` (strict local-only matching — legacy Continuo contract).
+   *
+   * ⚠ Interop note: `@continuo-terminal/server-node`'s bundled shell integration
+   * (`prepareShellIntegrationEnv`) emits `file://<real hostname>$PWD` — bash uses
+   * `$HOSTNAME`, fish uses `hostname` — NOT an empty/localhost host. So a host
+   * wiring those snippets to this parser MUST pass the machine hostname here
+   * (e.g. `acceptedHosts: ['', 'localhost', os.hostname()]`), otherwise every
+   * cwd update is silently dropped. See prepareShellIntegrationEnv JSDoc.
+   */
   acceptedHosts?: readonly string[];
+  /**
+   * 是否把 `file:///C:/...` 解码后的 `/C:/...` 的前导斜杠去掉得到 Windows 路径 `C:/...`。
+   * 默认按宿主平台检测(navigator=Windows 时 true)。**POSIX 上 `/C:/work` 是合法绝对
+   * 路径**(根下名为 `C:` 的目录),无条件 strip 会把它误改成非绝对路径(codex diff 复查)
+   * → 仅 Windows 模式 strip。
+   */
+  windowsDrivePaths?: boolean;
 }>;
+
+function isWindowsHost(): boolean {
+  return (
+    typeof navigator !== 'undefined' && /^win/i.test(navigator.platform ?? '')
+  );
+}
 
 export type Osc7TermLike = Readonly<{
   parser: {
@@ -43,7 +67,15 @@ export function parseOsc7Cwd(
   try {
     // legacy byte-identical: decodeURI preserves reserved chars (%2F / %23 / %3F).
     // Do NOT switch to decodeURIComponent - see plan-v3 P2-1 / topic-26.
-    return decodeURI(encPath);
+    const decoded = decodeURI(encPath);
+    // Windows: shells emit `file:///C:/Users/me`, so encPath is `/C:/Users/me`.
+    // Strip the leading slash before the drive letter → real Windows path
+    // (`C:/Users/me`). 仅在 Windows 模式 strip:POSIX 上 `/C:/work` 是合法绝对路径
+    // (根下名为 `C:` 的目录),strip 会破坏它(codex diff 复查)。
+    const stripDrive = opts?.windowsDrivePaths ?? isWindowsHost();
+    return stripDrive && /^\/[a-zA-Z]:[\\/]/.test(decoded)
+      ? decoded.slice(1)
+      : decoded;
   } catch {
     return null;
   }

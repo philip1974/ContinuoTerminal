@@ -34,7 +34,7 @@ and ships with its own `package.json` and `tsconfig.json`.
 |  Layer 3  Server (Node)                                              |
 |  +-----------------------------------------------------------+      |
 |  | packages/server-node                                      |      |
-|  | stdio MCP server: 7 terminal.* tools via @mcp/sdk         |      |
+|  | stdio MCP server: 8 terminal.* tools via @mcp/sdk         |      |
 |  | + node-pty PTY sessions with ring buffer + lifecycle      |      |
 |  +-----------------------------+-----------------------------+      |
 +--------------------------------|------------------------------------+
@@ -43,7 +43,7 @@ and ships with its own `package.json` and `tsconfig.json`.
 |  Layer 2  Protocol contract                                          |
 |  +-----------------------------------------------------------+      |
 |  | packages/protocol                                         |      |
-|  | Zod schemas + 7 MCP tool name constants + KEY_BYTES       |      |
+|  | Zod schemas + 9 MCP tool name constants + KEY_BYTES       |      |
 |  +-----------------------------------------------------------+      |
 +----------------------------------------------------------------------+
 
@@ -119,8 +119,10 @@ for the exact CallToolResult shape:
 - `content[0].text` is the same payload as JSON, kept as a compatibility
   fallback for hosts that only read text content.
 
-## Decisions captured in code, not separate ADRs
+## Decisions
 
-By project convention, design decisions are recorded in the commit history
-and inline in code/comments rather than in a separate `docs/decisions/`
-directory. See `git log --oneline` for the topic-by-topic build history.
+Architecture Decision Records live in `docs/decisions/` (`0001`–`0009`),
+capturing cross-repo PTY handover, buffer/snapshot semantics, transport parity,
+contract-testing drift guards, and related choices. Finer-grained, topic-level
+rationale is additionally recorded inline in code/comments and in the commit
+history — see `git log --oneline` for the topic-by-topic build history.

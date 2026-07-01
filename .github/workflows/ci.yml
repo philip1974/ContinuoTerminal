@@ -28,7 +28,10 @@ jobs:
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          # Pinned to match the root package.json `packageManager` (must be an
+          # exact semver — Corepack rejects a bare `pnpm@9`, which broke
+          # `pnpm -v` / `pnpm install` before install even ran).
+          version: 9.15.0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -49,6 +52,14 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Verify contract
+        # The cross-package contract tests + their typecheck (vitest.contract
+        # config / contract-tests/*) are a deliberate guard layer but were not
+        # run in CI — contract regressions could land green. verify:contract
+        # runs typecheck:contract + test:contract; they spawn no PTY, so they
+        # are CI-safe.
+        run: pnpm verify:contract
 
       - name: Build minimal-react-host
         # Vite bundling catches CSS / package.exports / dependency-resolution

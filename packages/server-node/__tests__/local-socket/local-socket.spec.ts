@@ -3,11 +3,23 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { connect, createServer as createNetServer, type Server as NetServer, type Socket } from 'node:net';
 import { PassThrough } from 'node:stream';
+import { StringDecoder } from 'node:string_decoder';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { describe, expect, it, afterEach } from 'vitest';
+import {
+  MCP_TOOL_AWAIT_STOP_HOOK,
+  MCP_TOOL_CREATE_SESSION,
+  MCP_TOOL_KILL,
+  MCP_TOOL_LIST_SESSIONS,
+  MCP_TOOL_PRESS_KEY,
+  MCP_TOOL_READ_OUTPUT,
+  MCP_TOOL_RESIZE,
+  MCP_TOOL_SEND_INPUT,
+  MCP_TOOL_SEND_TEXT,
+} from '@continuo-terminal/protocol';
+import { describe, expect, it, afterEach, vi } from 'vitest';
 
 import {
   LocalSocketClientTransport,
@@ -104,6 +116,32 @@ describe('local socket transport', { timeout: 60_000 }, () => {
     expect(result.tools).toHaveLength(8);
   });
 
+  // Contract-honesty guard: the protocol declares MCP_TOOL_AWAIT_STOP_HOOK and
+  // create_session's install_stop_hook/include_raw/stop_hook_installed fields,
+  // but server-node 0.1.x does not implement them (reserved for the stop-hook
+  // roadmap). This test — unlike the tsx-spawning server-integration one — runs
+  // on CI, so it locks the advertised surface so the drift can't silently
+  // reappear as a working-looking-but-no-op tool. See schemas.ts JSDoc.
+  it('does not advertise the unimplemented await_stop_hook tool', async () => {
+    const { socketPath } = await start();
+    const { client } = await connectClient(socketPath, 'local-socket-contract');
+    clients.push(client);
+
+    const names = (await client.listTools()).tools.map((tool) => tool.name);
+
+    expect(names).toEqual([
+      MCP_TOOL_CREATE_SESSION,
+      MCP_TOOL_LIST_SESSIONS,
+      MCP_TOOL_SEND_INPUT,
+      MCP_TOOL_SEND_TEXT,
+      MCP_TOOL_PRESS_KEY,
+      MCP_TOOL_READ_OUTPUT,
+      MCP_TOOL_KILL,
+      MCP_TOOL_RESIZE,
+    ]);
+    expect(names).not.toContain(MCP_TOOL_AWAIT_STOP_HOOK);
+  });
+
   // Skip on CI: calls terminal.create_session which spawns node-pty PTY;
   // CI runner can't spawn PTY reliably. See ADR-017 pattern #5.
   it.skipIf(process.env.CI === 'true')('shares one SessionManager across multiple socket clients', async () => {
@@ -158,6 +196,24 @@ describe('local socket transport', { timeout: 60_000 }, () => {
 
     expect(first).toEqual({ buffer: '{"b"', lines: ['{"a":1}'] });
     expect(second).toEqual({ buffer: '', lines: ['{"b":2}'] });
+  });
+
+  it('reconstructs a multi-byte UTF-8 char split across socket chunks (StringDecoder + splitLines)', () => {
+    // 复现 transport handleData 的解码路径:非 ASCII 内容(cwd/name/send_text)在真实网络
+    // 分包下可能把一个多字节字符切成两个 data 事件。逐 chunk toString() 会解出 �;
+    // 用 StringDecoder 跨 chunk 保留半个字符,才能无损重建。
+    const decoder = new StringDecoder('utf8');
+    const full = Buffer.from('{"text":"€🚀"}\n', 'utf8');
+    const cut = full.indexOf(0xe2) + 1; // 切在 € (E2 82 AC) 的第 1、2 字节之间
+
+    const first = splitLines('', decoder.write(full.subarray(0, cut)));
+    const second = splitLines(first.buffer, decoder.write(full.subarray(cut)));
+
+    expect(first.lines).toEqual([]); // 半个字符未成行,也没有产生 �
+    expect(first.buffer).not.toContain('�');
+    expect(second.lines).toEqual(['{"text":"€🚀"}']);
+    expect(second.buffer).toBe('');
+    expect(JSON.parse(second.lines[0]!)).toEqual({ text: '€🚀' });
   });
 
   it('closes unauthenticated socket connections', async () => {
@@ -227,6 +283,38 @@ describe('local socket transport', { timeout: 60_000 }, () => {
     expect(output).toContain('pong');
   });
 
+  // Polish round-7: after connect, the proxy removes its connect-phase error
+  // listener. Without a runtime error handler a mid-bridge socket error
+  // (server crash/reset → ECONNRESET/EPIPE) is an unhandled 'error' event that
+  // crashes the proxy process. This test resets the connection mid-bridge and
+  // asserts the proxy survives and shutdown() stays idempotent. (Pre-fix, the
+  // unhandled 'error' surfaces as an uncaughtException and fails the test.)
+  it('survives a mid-bridge socket reset without an unhandled error crash', async () => {
+    const { dir, socketPath } = await makeSocketPath();
+    dirs.push(dir);
+    const rawServer = createNetServer((socket) => {
+      // Simulate a server crash / reset shortly after accept (once the client
+      // has connected, so the connect promise resolves first).
+      setTimeout(() => socket.destroy(), 20);
+    });
+    await listen(rawServer, socketPath);
+
+    const stdin = new PassThrough();
+    const stdout = new PassThrough();
+    const proxy = await connectLocalSocketStdioProxy({ socketPath, stdin, stdout });
+
+    // Let the server-side destroy reset the client socket, then push data so a
+    // write-after-destroy also surfaces as a socket 'error' during bridging.
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    stdin.write('after-reset\n');
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    await expect(proxy.shutdown()).resolves.toBeUndefined();
+    await expect(proxy.shutdown()).resolves.toBeUndefined(); // idempotent
+
+    await new Promise<void>((resolve) => rawServer.close(() => resolve()));
+  });
+
   it('keeps local socket transport source terms generic', async () => {
     const root = path.resolve(__dirname, '../../src/transports');
     const sources = await Promise.all([
@@ -289,6 +377,65 @@ describe('local socket transport', { timeout: 60_000 }, () => {
       sessions: new SessionManager(),
       socketPath,
     })).rejects.toThrow(/not a socket/);
+  });
+
+  // Polish (fresh-codex find): the sun_path limit is in BYTES. A non-ASCII path
+  // (e.g. CJK) whose UTF-16 char length is under the limit but whose UTF-8 byte
+  // length is over it must be rejected up-front with a clear RangeError, not
+  // pass the pre-check and fail later as an opaque `listen EINVAL`.
+  it('rejects a socket path that exceeds the byte limit even when char length does not', async () => {
+    const longNonAscii = `/tmp/${'한'.repeat(40)}/sock`; // 40 chars, ~120 UTF-8 bytes
+    expect(longNonAscii.length).toBeLessThan(100); // would pass a naive .length check
+    const sessionManager = new SessionManager();
+    sessions.push(sessionManager);
+
+    await expect(startLocalSocketTransport({
+      sessions: sessionManager,
+      socketPath: longNonAscii,
+    })).rejects.toThrow(/exceeds \d+ bytes/);
+  });
+
+  // Polish (fresh-codex find): a failed connect must NOT poison the transport.
+  // Before the fix, start() stored the socket before connecting and left the
+  // failed socket in place on error, so a retry short-circuited (`if
+  // (this.socket) return`) and send() then failed "local socket client is
+  // closed". Common under a server/sidecar startup race.
+  it('LocalSocketClientTransport.start() is retryable after an initial connect failure', async () => {
+    const { dir, socketPath } = await makeSocketPath();
+    dirs.push(dir);
+
+    const transport = new LocalSocketClientTransport(socketPath);
+    await expect(transport.start()).rejects.toBeTruthy(); // no server listening yet
+
+    // Bring the server up on the same path, then reconnect the SAME transport.
+    const sessionManager = new SessionManager();
+    sessions.push(sessionManager);
+    const handle = await startLocalSocketTransport({ sessions: sessionManager, socketPath });
+    handles.push(handle);
+
+    const client = new Client({ name: 'retry', version: '0' }, { capabilities: {} });
+    clients.push(client);
+    await client.connect(transport); // calls start() again → must reconnect, not short-circuit
+    const result = await client.listTools();
+
+    expect(result.tools).toHaveLength(8);
+  });
+
+  // Cross-platform: Unix domain sockets aren't supported on Windows (a named-pipe
+  // transport is a follow-up). Assert the win32 branch fails fast with a clear
+  // message rather than an opaque ENOENT/EINVAL later. (Windows branch, covered
+  // here via a mocked platform since CI has no windows-latest runner.)
+  it('throws a clear error on Windows (win32 has no Unix-socket transport)', async () => {
+    const platformSpy = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32');
+    try {
+      const { dir, socketPath } = await makeSocketPath();
+      dirs.push(dir);
+      await expect(
+        startLocalSocketTransport({ sessions: new SessionManager(), socketPath }),
+      ).rejects.toThrow(/not supported on Windows/i);
+    } finally {
+      platformSpy.mockRestore();
+    }
   });
 
 });

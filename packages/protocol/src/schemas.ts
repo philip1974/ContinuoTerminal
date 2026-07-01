@@ -82,7 +82,8 @@ export const createSessionInputSchema = z
     cwd: z.string().optional(),
     name: z.string().optional(),
     agentLabel: z.string().optional(),
-    /** Override the spawned shell binary. Defaults to $SHELL or /bin/zsh. */
+    /** Override the spawned shell binary. Defaults to the platform default shell
+     * (Windows: powershell.exe; Mac/Linux: validated $SHELL, else /bin/sh). */
     shell: z.string().optional(),
     /**
      * Per-session CLI args appended to `shell` spawn (e.g. `['-l', '-i']` for
@@ -105,7 +106,21 @@ export const createSessionInputSchema = z
     env: z.record(z.string(), z.string()).optional(),
     /** spawn 后 delay 200ms(Windows 600)键入此命令 + \n. */
     autorun: z.string().optional(),
+    /**
+     * Request that a Continuo-managed Stop hook be installed into the spawned
+     * CLI's settings before it starts (pairs with `terminal.await_stop_hook`).
+     * **Not consumed by server-node 0.1.x** — the schema is reserved for the
+     * stop-hook roadmap (see `awaitStopHookInputSchema` below); server-node
+     * neither installs the hook nor advertises `terminal.await_stop_hook`, so
+     * passing `true` is silently ignored here. Continuo-style hosts that
+     * implement the hook lifecycle are the intended consumers.
+     */
     install_stop_hook: z.boolean().optional(),
+    /**
+     * When awaiting a stop hook, include the full raw hook payload in the
+     * result. **Not consumed by server-node 0.1.x** — reserved alongside
+     * `install_stop_hook` for the stop-hook roadmap.
+     */
     include_raw: z.boolean().optional(),
     /**
      * Optional attach hint. **Not consumed by server-node 0.1.x** — see
@@ -122,6 +137,11 @@ export const createSessionOutputSchema = z
     session_id: z.string().min(1),
     /** PTY child pid (when available; node-pty exposes pid on most platforms). */
     pid: z.number().int().optional(),
+    /**
+     * Echoes whether a Stop hook was installed for the session. **Not emitted
+     * by server-node 0.1.x** — reserved for the stop-hook roadmap (pairs with
+     * the `install_stop_hook` input); server-node never sets this field.
+     */
     stop_hook_installed: z.boolean().optional(),
   })
   .strict();
@@ -226,6 +246,11 @@ export const readOutputInputSchema = z
     session_id: z.string().min(1),
     since_seq: z.number().int().nonnegative().optional(),
     max_lines: z.number().int().min(1).max(READ_OUTPUT_MAX_LINES).optional(),
+    /**
+     * Strip ANSI/control sequences from `lines` only. The `data` field is
+     * always the raw byte stream regardless of this flag — pass strip_ansi
+     * to get human-readable `lines`, read `data` for lossless TUI replay.
+     */
     strip_ansi: z.boolean().optional(),
   })
   .strict();
@@ -235,15 +260,24 @@ export const readOutputOutputSchema = z
     lines: z.array(z.string()),
     /**
      * Raw concatenated output since `since_seq` with original byte stream
-     * preserved (NO splitting / line normalization / trailing-newline insertion).
-     * TUI consumers (xterm renderers running ink-based CLIs like Claude Code,
-     * Codex, htop) MUST use `data` instead of `lines` — `\r`-only cursor
-     * updates (spinner frames, in-place redraws) are corrupted when output
-     * is split-then-rejoined with newline. `lines` is preserved for non-TUI
-     * consumers + backwards compat.
+     * preserved (NO splitting / line normalization / trailing-newline insertion)
+     * and NOT affected by `strip_ansi` — `data` is always the raw bytes; only
+     * `lines` is cleaned when `strip_ansi` is set. TUI consumers (xterm
+     * renderers running ink-based CLIs like Claude Code, Codex, htop) MUST use
+     * `data` instead of `lines` — `\r`-only cursor updates (spinner frames,
+     * in-place redraws) are corrupted when output is split-then-rejoined with
+     * newline or stripped of control sequences. `lines` is preserved for
+     * non-TUI consumers + backwards compat.
      */
     data: z.string(),
     next_seq: z.number().int().nonnegative(),
+    /**
+     * True when the byte-capped session buffer evicted output before this
+     * `since_seq` — i.e. real data loss the caller can never retrieve. It is
+     * NOT set by the caller's own `max_lines` clipping (that drops nothing —
+     * `data` stays complete and `next_seq` advances); only genuine buffer
+     * eviction sets it, so clients can treat `true` as "history was lost".
+     */
     truncated: z.boolean(),
   })
   .strict();

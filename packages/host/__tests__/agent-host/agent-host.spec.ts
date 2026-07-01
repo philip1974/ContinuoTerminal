@@ -47,6 +47,20 @@ describe('AgentHost', () => {
     expect(env.MCP_META_BUILD_ID).toBe('42');
   });
 
+  // Polish (phase 2): distinct metadata keys that normalize to the same
+  // MCP_META_<KEY> env var must not silently overwrite each other — compose
+  // throws naming both colliding keys instead of dropping metadata.
+  it('throws on metadata keys that collide after env-var normalization', async () => {
+    host = await bootstrapAgentHost({ transport: { kind: 'stdio-child' } });
+
+    expect(() =>
+      host!.createAgentEnv({
+        subject: 'agent-collide',
+        metadata: { 'build-id': 'dash', build_id: 'underscore' },
+      }),
+    ).toThrow(/both normalize to the env var MCP_META_BUILD_ID/);
+  });
+
   it('throws HostDisposedError after dispose', async () => {
     host = await bootstrapAgentHost({ transport: { kind: 'stdio-child' } });
     await host.dispose();

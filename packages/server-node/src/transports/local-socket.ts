@@ -1,7 +1,9 @@
+import { Buffer } from 'node:buffer';
 import { chmod, lstat, mkdir, stat, unlink } from 'node:fs/promises';
 import { createServer, type Server as NetServer, type Socket } from 'node:net';
 import path from 'node:path';
 import process from 'node:process';
+import { StringDecoder } from 'node:string_decoder';
 
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { deserializeMessage, serializeMessage } from '@modelcontextprotocol/sdk/shared/stdio.js';
@@ -18,8 +20,14 @@ export type SplitLinesResult = {
   readonly lines: readonly string[];
 };
 
-export function splitLines(buffer: string, chunk: string | Buffer): SplitLinesResult {
-  const combined = buffer + chunk.toString();
+/**
+ * 纯文本按行(`\n`)分割,保留最后的不完整行到返回的 `buffer` 供下次拼接。
+ * `chunk` 必须是【已解码】的字符串:不要在这里 `Buffer.toString()` 逐块解码,否则
+ * 一个多字节 UTF-8 字符被 socket 分包切开时会被解成 `�` 且无法恢复。解码状态必须
+ * 跨 chunk 保留,由调用方用 `StringDecoder('utf8')` 承担(见两个 transport 的 handleData)。
+ */
+export function splitLines(buffer: string, chunk: string): SplitLinesResult {
+  const combined = buffer + chunk;
   const parts = combined.split('\n');
   const tail = parts.pop() ?? '';
   return { buffer: tail, lines: parts.map((line) => line.replace(/\r$/, '')) };
@@ -72,6 +80,8 @@ export class ServerSocketTransport implements Transport {
   private buffer = '';
   private closed = false;
   private started = false;
+  // 跨 data 事件保留不完整的多字节 UTF-8 序列,避免逐 chunk 解码损坏字符。
+  private readonly decoder = new StringDecoder('utf8');
 
   constructor(private readonly socket: Socket) {}
 
@@ -97,7 +107,7 @@ export class ServerSocketTransport implements Transport {
   }
 
   private readonly handleData = (chunk: Buffer): void => {
-    const result = splitLines(this.buffer, chunk);
+    const result = splitLines(this.buffer, this.decoder.write(chunk));
     this.buffer = result.buffer;
     for (const line of result.lines) {
       if (line.length === 0) continue;
@@ -129,9 +139,14 @@ async function prepareSocketPath(socketPath: string): Promise<void> {
   if (process.platform === 'win32') {
     throw new Error('Local socket transport is not supported on Windows; use named-pipe follow-up transport.');
   }
-  if (socketPath.length > MAX_UNIX_SOCKET_PATH_LENGTH) {
+  // The OS sun_path limit is in BYTES, not JS string length (UTF-16 units), so
+  // a non-ASCII path (e.g. a CJK username / temp dir) could pass a .length check
+  // yet blow the real limit → an opaque `listen EINVAL` instead of this clear
+  // error. Measure UTF-8 bytes.
+  const socketPathBytes = Buffer.byteLength(socketPath, 'utf8');
+  if (socketPathBytes > MAX_UNIX_SOCKET_PATH_LENGTH) {
     throw new RangeError(
-      `Local socket path exceeds ${MAX_UNIX_SOCKET_PATH_LENGTH} characters: ${socketPath}`,
+      `Local socket path exceeds ${MAX_UNIX_SOCKET_PATH_LENGTH} bytes (${socketPathBytes}): ${socketPath}`,
     );
   }
 

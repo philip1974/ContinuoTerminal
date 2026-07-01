@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import os from 'node:os';
 import path from 'node:path';
 import process from 'node:process';
 import { Buffer } from 'node:buffer';
 
 import { spawn, type IDisposable, type IPty } from 'node-pty';
+import { getDefaultShell } from './shell-env/index.js';
 import {
   KEY_BYTES,
   type CreateSessionInput,
@@ -26,6 +26,16 @@ import {
 const MAX_BUFFER_BYTES = 4 * 1024 * 1024;
 const DEFAULT_COLS = 80;
 const DEFAULT_ROWS = 24;
+
+/**
+ * Delay before typing `autorun` into a freshly spawned PTY. Windows ConPTY needs
+ * noticeably longer than a Unix PTY to be ready to accept input; typing too early
+ * drops or mangles the command. Matches the protocol schema's documented
+ * "200ms (Windows 600)" contract (previously hardcoded 200 on every platform).
+ */
+export function autorunDelayMs(): number {
+  return process.platform === 'win32' ? 600 : 200;
+}
 
 type BufferChunk = {
   data: string;
@@ -162,7 +172,10 @@ export class SessionManager {
     }
     const args = input.args ?? [];
     const cwd = input.cwd ? path.resolve(input.cwd) : process.cwd();
-    const shell = input.shell ?? process.env.SHELL ?? '/bin/zsh';
+    // getDefaultShell() 已处理平台默认(Windows→powershell.exe;Mac/Linux 校验 $SHELL
+    // 后回退)。旧实现 `process.env.SHELL ?? '/bin/zsh'` 在 Windows 无 $SHELL 时会 spawn
+    // 字面量 /bin/zsh 崩溃,且不校验 $SHELL。见 cross-platform-audit P0。
+    const shell = input.shell ?? getDefaultShell();
     const cols = input.cols ?? DEFAULT_COLS;
     const rows = input.rows ?? DEFAULT_ROWS;
     const title = input.name || path.basename(cwd) || 'terminal';
@@ -220,7 +233,7 @@ export class SessionManager {
         if (this.sessions.has(id)) {
           pty.write(`${input.autorun}\r`);
         }
-      }, 200);
+      }, autorunDelayMs());
     }
 
     return { session_id: id, pid: pty.pid };
@@ -268,13 +281,24 @@ export class SessionManager {
 
     return {
       lines: limited,
-      // Raw text preserved (no splitting / line normalization). TUI consumers
-      // MUST use this — Claude/Codex/htop ink-based CLIs render spinner frames
-      // via `\r` cursor returns (without `\n`); splitting on `/\r?\n/` then
-      // rejoining with `\n` corrupts the cursor positioning.
-      data: normalized,
+      // Raw byte stream preserved — NO splitting/line normalization AND NOT
+      // subject to strip_ansi. `strip_ansi` only cleans `lines`; `data` is
+      // always the original bytes. TUI consumers MUST use this — Claude/Codex/
+      // htop ink-based CLIs render spinner frames via `\r` cursor returns
+      // (without `\n`), so splitting on `/\r?\n/` + rejoining OR stripping ANSI
+      // corrupts cursor positioning. (Polish round-5: previously `data:
+      // normalized` leaked strip_ansi into `data`, contradicting the schema's
+      // "original byte stream preserved" contract — no consumer read `data`
+      // with strip_ansi:true, so this restores the documented behavior.)
+      data: text,
       next_seq: nextSeq,
-      truncated: truncated || limited.length < lines.length,
+      // `truncated` signals REAL data loss — chunks the byte-capped SessionBuffer
+      // evicted before this since_seq — matching its meaning everywhere else
+      // (SessionBuffer.readSince / getBufferSnapshot / session-buffer tests). It
+      // must NOT be set merely because `max_lines` clipped the returned `lines`:
+      // that drops nothing (data stays complete, next_seq advances), and OR-ing
+      // it in made clients false-alarm "data lost" on normal max_lines use.
+      truncated,
     };
   }
 

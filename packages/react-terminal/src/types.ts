@@ -3,7 +3,17 @@ import type { ITerminalOptions } from '@xterm/xterm';
 
 export interface MCPClientAdapter {
   callTool<O = unknown>(name: string, args: unknown): Promise<O>;
-  subscribeOutput?(sessionId: string, onChunk: (lines: string[], nextSeq: number) => void): () => void;
+  /**
+   * Optional push channel for output (replaces polling when provided). The
+   * third `data` arg is the raw byte stream (like read_output.data): push
+   * adapters SHOULD supply it so TUI apps render correctly — `\r`-only cursor
+   * updates / in-place redraws are corrupted by line-splitting. It is optional
+   * for back-compat; when omitted the renderer falls back to `lines`.
+   */
+  subscribeOutput?(
+    sessionId: string,
+    onChunk: (lines: string[], nextSeq: number, data?: string) => void,
+  ): () => void;
 }
 
 export interface TerminalProps {

@@ -107,6 +107,17 @@ describe('protocol I/O schemas roundtrip — contract', () => {
     expect(killInputSchema.safeParse({ session_id: 's', signal: 'BOGUS' }).success).toBe(false);
   });
 
+  // Polish round-4: kill is fire-and-forget over MCP — the session is dropped
+  // as soon as the signal is sent (SessionManager removes it), so there is no
+  // retry and no grace/escalation knob on the public schema. The library-level
+  // gracePeriodMs auto-escalation is intentionally NOT exposed here; .strict()
+  // must reject it so the "immediately removed, not retryable" contract in the
+  // tool description can't silently drift into a half-exposed escalation API.
+  it('kill does not expose a grace/escalation knob on the MCP schema', () => {
+    expect(killInputSchema.safeParse({ session_id: 's', grace_period_ms: 50 }).success).toBe(false);
+    expect(killInputSchema.safeParse({ session_id: 's', gracePeriodMs: 50 }).success).toBe(false);
+  });
+
   it('resize requires session_id + cols + rows (topic 46 — P1.6 visual distortion fix)', () => {
     expect(resizeInputSchema.safeParse({ session_id: 's', cols: 120, rows: 40 }).success).toBe(true);
     expect(resizeInputSchema.safeParse({ session_id: 's', cols: 120 }).success).toBe(false);

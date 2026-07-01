@@ -154,6 +154,58 @@ describe('react-terminal Terminal component', () => {
     }
   });
 
+  // Polish round-3: the hidden → visible transition must sync the PTY, not
+  // only re-fit the local xterm. doFit (fit + terminal.resize) is reused via a
+  // ref; before the fix the transition called fitAddon.fit() alone, leaving the
+  // backend PTY at a stale size after a resize-while-hidden.
+  it('sends terminal.resize when transitioning from hidden back to visible', async () => {
+    const adapter = makeAdapter();
+    const { rerender } = render(
+      <TerminalComponent sessionId="vis" adapter={adapter} pollIntervalMs={false} hidden />,
+    );
+    // Drain the mount-time fit (rAF) so we isolate the transition-triggered call.
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    (adapter.callTool as any).mockClear();
+
+    rerender(<TerminalComponent sessionId="vis" adapter={adapter} pollIntervalMs={false} hidden={false} />);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(adapter.callTool).toHaveBeenCalledWith(
+      'terminal.resize',
+      expect.objectContaining({ session_id: 'vis', cols: 80, rows: 24 }),
+    );
+  });
+
+  // Polish round-6: large read_output.data (up to the server's multi-MiB
+  // buffer) must go through safeWrite's 16KB chunking, not one synchronous
+  // terminal.write(bigBlob) that janks the host UI. safeWrite.ts existed +
+  // was exported but Terminal.tsx bypassed it.
+  it('chunks large output through safeWrite instead of one giant terminal.write', async () => {
+    const LARGE = 'x'.repeat(40 * 1024); // 40KB → 3 × ≤16KB chunks
+    let served = false;
+    const adapter: MCPClientAdapter = {
+      callTool: vi.fn(async () => {
+        if (!served) {
+          served = true;
+          return { structuredContent: { lines: [], data: LARGE, next_seq: 1 } };
+        }
+        return { structuredContent: { lines: [], data: '', next_seq: 1 } };
+      }) as unknown as MCPClientAdapter['callTool'],
+    };
+
+    render(<TerminalComponent sessionId="big" adapter={adapter} pollIntervalMs={20} />);
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    const inst = (XTermMock as any).mock.results[0]?.value;
+    const writeArgs: string[] = inst.write.mock.calls
+      .map((c: unknown[]) => c[0])
+      .filter((a: unknown): a is string => typeof a === 'string');
+
+    expect(writeArgs.filter((s) => s.length > 16 * 1024)).toEqual([]); // no giant single write
+    expect(writeArgs.length).toBeGreaterThan(1); // actually chunked
+    expect(writeArgs.join('')).toBe(LARGE); // lossless reassembly
+  });
+
   // Round-5 P1: the subscribeOutput branch also needs the effect-local
   // cancelled guard. Round-3 added it to polling but missed this path, so
   // an adapter whose unsubscribe() is async (or whose callback fires after
@@ -198,5 +250,66 @@ describe('react-terminal Terminal component', () => {
       );
       expect(staleCalls).toEqual([]);
     }
+  });
+
+  // Polish (phase 2): the subscribeOutput push path must honor the raw `data`
+  // arg (like the polling path) so TUI \r redraws survive; older adapters that
+  // omit data fall back to lines.
+  it('subscribeOutput writes raw data verbatim when provided, else falls back to lines', () => {
+    let cb: ((lines: string[], nextSeq: number, data?: string) => void) | null = null;
+    const adapter: MCPClientAdapter = {
+      callTool: vi.fn() as unknown as MCPClientAdapter['callTool'],
+      subscribeOutput: vi.fn((_sessionId: string, onChunk: (lines: string[], nextSeq: number, data?: string) => void) => {
+        cb = onChunk;
+        return () => {};
+      }) as unknown as MCPClientAdapter['subscribeOutput'],
+    };
+
+    render(<TerminalComponent sessionId="sub" adapter={adapter} pollIntervalMs={false} />);
+    const fire = cb as unknown as (lines: string[], nextSeq: number, data?: string) => void;
+    expect(fire).toBeTypeOf('function');
+
+    const raw = '\x1b[32mok\x1b[0m\rspin';
+    fire(['ok', 'spin'], 5, raw);
+    fire(['x', 'y'], 6); // no data → lines fallback
+
+    const inst = (XTermMock as any).mock.results[0]?.value;
+    const writes: string[] = inst.write.mock.calls
+      .map((c: unknown[]) => c[0])
+      .filter((a: unknown): a is string => typeof a === 'string');
+
+    expect(writes).toContain(raw); // raw stream written verbatim (\r preserved)
+    expect(writes).toContain('x\r\ny'); // fallback path still joins lines
+  });
+
+  // Polish (phase 2): send_text is fire-and-forget, but a tool-level failure
+  // resolves as { isError: true } (not a reject). It must still reach onError,
+  // not be silently swallowed.
+  it('routes an isError result from send_text to onError', async () => {
+    const onError = vi.fn();
+    const adapter: MCPClientAdapter = {
+      callTool: vi.fn(async () => ({
+        isError: true,
+        content: [{ type: 'text', text: '{"error":"SESSION_NOT_FOUND","message":"gone"}' }],
+      })) as unknown as MCPClientAdapter['callTool'],
+    };
+
+    render(<TerminalComponent sessionId="s1" adapter={adapter} pollIntervalMs={false} onError={onError} />);
+
+    // Drive xterm's onData handler (registered via terminal.onData mock).
+    const xterm = (XTermMock as any).mock.results[0]?.value;
+    const onDataHandler = xterm.onData.mock.calls[0][0] as (data: string) => void;
+    onDataHandler('hello');
+
+    // Poll until the fire-and-forget promise chain routes the isError result to
+    // onError — a fixed short delay is flaky under parallel-worker load.
+    for (let waited = 0; onError.mock.calls.length === 0 && waited < 1000; waited += 10) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(onError).toHaveBeenCalledTimes(1);
+    const err = onError.mock.calls[0][0] as Error & { code?: string };
+    expect(err).toBeInstanceOf(Error);
+    expect(err.code).toBe('SESSION_NOT_FOUND');
   });
 });

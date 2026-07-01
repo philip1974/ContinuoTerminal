@@ -15,9 +15,11 @@ layer diagram and dependency graph.
 
 | Path | Name | Purpose | Status |
 |---|---|---|---|
-| `packages/protocol` | `@continuo-terminal/protocol` | Zod schemas + 7 `terminal.*` MCP tool name constants + `KEY_BYTES` | done |
-| `packages/server-node` | `@continuo-terminal/server-node` | Standalone Node stdio MCP server (StdioServerTransport + 7 handlers + node-pty PTY runtime) | done |
+| `packages/protocol` | `@continuo-terminal/protocol` | Zod schemas + 9 `terminal.*` MCP tool name constants (8 implemented + reserved `await_stop_hook`) + `KEY_BYTES` | done |
+| `packages/server-node` | `@continuo-terminal/server-node` | Standalone Node stdio MCP server (StdioServerTransport + 8 tool handlers + node-pty PTY runtime) | done |
 | `packages/react-terminal` | `@continuo-terminal/react-terminal` | React 19 + xterm 6 component, transport injected via `MCPClientAdapter` | done |
+| `packages/host` | `@continuo-terminal/host` | Host abstraction: `bootstrapAgentHost` + `TokenStore` bearer auth + agent env composition + transport wiring | done |
+| `packages/shell-quote` | `@continuo-terminal/shell-quote` | Host-agnostic POSIX/cmd/PowerShell safe quoting (pure functions) | done |
 | `examples/standalone-cli` | `@continuo-terminal/example-standalone-cli` | Node CLI demoing server-node over stdio | done |
 | `examples/minimal-react-host` | `@continuo-terminal/example-minimal-react-host` | Vite + React 19 host wiring `@continuo-terminal/react-terminal` against a mock MCP adapter | done |
 | `crates/server-rust`, `examples/tauri-sidecar`, `packages/react-terminal` real-render host | — | future topics | placeholder |

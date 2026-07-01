@@ -113,7 +113,7 @@ impl McpClient {
             .unwrap_or("")
             .to_string();
         let body_text = resp.text().await.context("HTTP response body read failed")?;
-        let body = parse_http_body(&content_type, &body_text)?;
+        let body = parse_http_body(&content_type, &body_text, id)?;
         if !status.is_success() {
             bail!("HTTP {status}: {body}");
         }
@@ -135,18 +135,63 @@ pub fn jsonrpc_request(id: u64, method: &str, params: Value) -> Value {
     })
 }
 
-fn parse_http_body(content_type: &str, body: &str) -> Result<Value> {
+fn parse_http_body(content_type: &str, body: &str, expected_id: u64) -> Result<Value> {
     if content_type.contains("text/event-stream") {
-        let data = body
-            .lines()
-            .filter_map(|line| line.strip_prefix("data:"))
-            .map(str::trim)
-            .find(|line| !line.is_empty())
-            .ok_or_else(|| anyhow!("SSE response missing data frame: {body}"))?;
-        return serde_json::from_str(data).context("SSE data frame was not JSON");
+        return parse_sse_jsonrpc(body, expected_id);
     }
 
     serde_json::from_str(body).context("HTTP response was not JSON")
+}
+
+/// Split an SSE body into per-event `data` payloads: events are separated by
+/// blank lines, and the `data:` lines within one event are joined with `\n`
+/// (stripping a single leading space after the colon, per the SSE spec).
+fn split_sse_events(body: &str) -> Vec<String> {
+    let mut events = Vec::new();
+    let mut data_lines: Vec<String> = Vec::new();
+    for raw in body.split('\n') {
+        let line = raw.strip_suffix('\r').unwrap_or(raw); // tolerate CRLF
+        if line.is_empty() {
+            if !data_lines.is_empty() {
+                events.push(data_lines.join("\n"));
+                data_lines.clear();
+            }
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("data:") {
+            data_lines.push(rest.strip_prefix(' ').unwrap_or(rest).to_string());
+        }
+    }
+    if !data_lines.is_empty() {
+        events.push(data_lines.join("\n"));
+    }
+    events
+}
+
+/// Parse the JSON-RPC response out of an SSE body. The stream may split one
+/// response across multiple `data:` lines and may carry notification/progress
+/// frames before the response, so return the message matching `expected_id`
+/// (falling back to the first one carrying `result`/`error`) rather than the
+/// first `data:` frame. Mirrors packages/react-terminal/src/http-adapter.ts.
+fn parse_sse_jsonrpc(body: &str, expected_id: u64) -> Result<Value> {
+    let mut first_response: Option<Value> = None;
+    for event in split_sse_events(body) {
+        let msg: Value = match serde_json::from_str(&event) {
+            Ok(value) => value,
+            Err(_) => continue, // skip non-JSON frames (comments / keep-alive)
+        };
+        let is_response = msg.get("result").is_some() || msg.get("error").is_some();
+        if !is_response {
+            continue; // skip notifications / progress frames
+        }
+        if msg.get("id").and_then(Value::as_u64) == Some(expected_id) {
+            return Ok(msg);
+        }
+        if first_response.is_none() {
+            first_response = Some(msg);
+        }
+    }
+    first_response.ok_or_else(|| anyhow!("SSE response had no JSON-RPC response frame: {body}"))
 }
 
 fn parse_tool_payload(result: &Value) -> Result<Value> {
@@ -193,8 +238,27 @@ mod tests {
     #[test]
     fn parses_sse_jsonrpc_body() {
         let body = "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n\n";
-        let parsed = super::parse_http_body("text/event-stream", body).expect("SSE body should parse");
+        let parsed = super::parse_http_body("text/event-stream", body, 1).expect("SSE body should parse");
 
         assert_eq!(parsed["result"], json!({}));
+    }
+
+    // Polish: SSE parsing must follow the spec, not "first data: line" — mirrors
+    // the React http-adapter fix (a response can span multiple data: lines, and
+    // a notification/progress frame can precede the response).
+    #[test]
+    fn aggregates_multiline_sse_data() {
+        let body = "event: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\ndata: \"result\":{\"ok\":true}}\n\n";
+        let parsed = super::parse_http_body("text/event-stream", body, 1).expect("multi-line SSE should parse");
+
+        assert_eq!(parsed["result"]["ok"], json!(true));
+    }
+
+    #[test]
+    fn skips_leading_notification_frame() {
+        let body = "event: message\ndata: {\"jsonrpc\":\"2.0\",\"method\":\"notifications/progress\",\"params\":{}}\n\nevent: message\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"ok\":true}}\n\n";
+        let parsed = super::parse_http_body("text/event-stream", body, 1).expect("should skip notification");
+
+        assert_eq!(parsed["result"]["ok"], json!(true));
     }
 }

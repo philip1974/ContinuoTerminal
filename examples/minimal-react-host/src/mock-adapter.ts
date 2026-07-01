@@ -63,12 +63,18 @@ export const mockAdapter: MCPClientAdapter = {
       const since = (input.since_seq as number | undefined) ?? 0;
       const session = sessions.get(id);
       if (!session) {
-        // Shape matches protocol readOutputOutputSchema (strict): lines / next_seq / truncated.
-        return structured({ lines: [], next_seq: 0, truncated: false }) as unknown as O;
+        // Shape matches protocol readOutputOutputSchema (strict):
+        // lines / data / next_seq / truncated. `data` is required (the raw byte
+        // stream TUI consumers replay); empty here since there is no session.
+        return structured({ lines: [], data: '', next_seq: 0, truncated: false }) as unknown as O;
       }
       const after = session.output.filter((output) => output.seq >= since);
+      const lines = after.map((output) => output.line);
       return structured({
-        lines: after.map((output) => output.line),
+        lines,
+        // `data` is the raw stream; mock lines carry no control sequences, so
+        // join with CRLF to match how the renderer would present them.
+        data: lines.join('\r\n'),
         next_seq: session.nextSeq,
         truncated: false,
       }) as unknown as O;

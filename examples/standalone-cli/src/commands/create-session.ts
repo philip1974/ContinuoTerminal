@@ -1,23 +1,20 @@
 import { Command } from 'commander';
 
 import { readResult, safeKill, withClient } from '../mcp-client.js';
+import { parsePositiveInt } from '../parse-args.js';
 
 type CreateResult = {
   session_id: string;
   pid?: number;
 };
 
-function parseNumber(value: string): number {
-  return Number(value);
-}
-
 export function register(program: Command): void {
   program
     .command('create-session')
     .option('--cwd <path>')
     .option('--shell <path>')
-    .option('--cols <n>', 'PTY columns', parseNumber)
-    .option('--rows <n>', 'PTY rows', parseNumber)
+    .option('--cols <n>', 'PTY columns (positive integer)', parsePositiveInt)
+    .option('--rows <n>', 'PTY rows (positive integer)', parsePositiveInt)
     .action(async (options: { cwd?: string; shell?: string; cols?: number; rows?: number }) => {
       // This is a single-process demo: each cli invocation spawns its own
       // server-node child and tears it down on exit, so any session created
@@ -31,8 +28,8 @@ export function register(program: Command): void {
           arguments: {
             ...(options.cwd ? { cwd: options.cwd } : {}),
             ...(options.shell ? { shell: options.shell } : {}),
-            ...(options.cols ? { cols: options.cols } : {}),
-            ...(options.rows ? { rows: options.rows } : {}),
+            ...(options.cols !== undefined ? { cols: options.cols } : {}),
+            ...(options.rows !== undefined ? { rows: options.rows } : {}),
           },
         });
         const created = readResult<CreateResult>(result);

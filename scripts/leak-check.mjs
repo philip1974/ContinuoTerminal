@@ -2,8 +2,11 @@
 import { readFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const REPO_ROOT = path.resolve(new URL('.', import.meta.url).pathname, '..');
+// fileURLToPath 跨平台:Windows 盘符 file URL 的 .pathname 是 `/C:/...`,直接 path.resolve
+// 会得到畸形路径(脚本找不到 repo 文件);fileURLToPath 正确还原为 `C:\...`(跨平台审计 P2)。
+const REPO_ROOT = path.resolve(fileURLToPath(new URL('.', import.meta.url)), '..');
 const BASELINE_PATH = path.join(REPO_ROOT, 'scripts', 'leak-baseline.json');
 const ADVISORY = process.argv.includes('--advisory');
 

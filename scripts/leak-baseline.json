@@ -230,6 +230,41 @@
       "pattern": "Continuo",
       "excerpt": "// Origin: Continuo `src/lib/shell-quote.ts` (ported into @continuo-terminal/shell-quote",
       "rationale": "shell-quote module provenance comment"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 110,
+      "pattern": "Continuo",
+      "excerpt": "     * Request that a Continuo-managed Stop hook be installed into the spawned",
+      "rationale": "install_stop_hook reserved-field JSDoc — Continuo host consumer attribution (polish #2)"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 115,
+      "pattern": "Continuo",
+      "excerpt": "     * passing `true` is silently ignored here. Continuo-style hosts that",
+      "rationale": "install_stop_hook reserved-field JSDoc — Continuo host consumer attribution (polish #2)"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 97,
+      "pattern": "Continuo",
+      "excerpt": "    // cell grid and avoids the letter-spacing path. Mirrors Continuo main",
+      "rationale": "WebGL renderer JSDoc — mirrors Continuo main repo useTerminal.ts pattern"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 185,
+      "pattern": "panel",
+      "excerpt": "  // Re-fit on hidden → visible transition (host panel toggled back). Must run",
+      "rationale": "hidden→visible re-fit inline comment — generic host panel/tab term (polish #3)"
+    },
+    {
+      "file": "packages/react-terminal/src/osc7-cwd.ts",
+      "line": 20,
+      "pattern": "Continuo",
+      "excerpt": "   * `['', 'localhost']` (strict local-only matching — legacy Continuo contract).",
+      "rationale": "Osc7Options.acceptedHosts JSDoc — legacy Continuo strict-host contract reference (polish #10)"
     }
   ]
 }

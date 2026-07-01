@@ -1,10 +1,9 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CT_PACKAGES = ['protocol', 'host', 'server-node', 'react-terminal'];
 
 function readJson(p) {
   try {
@@ -14,11 +13,17 @@ function readJson(p) {
   }
 }
 
+// Derive the package list from the filesystem rather than a hardcoded array so
+// a newly added workspace package (e.g. shell-quote, which the old static list
+// omitted) can't be silently dropped from the version report.
 function gatherCTVersions() {
+  const packagesDir = path.join(REPO_ROOT, 'packages');
   const v = {};
-  for (const pkg of CT_PACKAGES) {
-    const j = readJson(path.join(REPO_ROOT, 'packages', pkg, 'package.json'));
-    v[pkg] = j?.version ?? 'unknown';
+  for (const entry of readdirSync(packagesDir, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue;
+    const j = readJson(path.join(packagesDir, entry.name, 'package.json'));
+    if (!j) continue; // skip non-package dirs (e.g. a bare README folder)
+    v[entry.name] = j.version ?? 'unknown';
   }
   return v;
 }

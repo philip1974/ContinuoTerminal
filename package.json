@@ -4,7 +4,16 @@
   "version": "0.0.0",
   "type": "module",
   "engines": { "node": ">=24" },
-  "packageManager": "pnpm@9",
+  "packageManager": "pnpm@9.15.0",
+  "pnpm": {
+    "overrides": {
+      "undici@<7.28.0": "^7.28.0",
+      "hono@<4.12.25": ">=4.12.25",
+      "vite@<=6.4.2": "^6.4.3",
+      "esbuild@<=0.24.2": ">=0.25.0",
+      "esbuild@>=0.27.3 <0.28.1": ">=0.28.1"
+    }
+  },
   "scripts": {
     "test": "vitest run",
     "typecheck": "pnpm exec tsc --noEmit -p packages/protocol/tsconfig.json && pnpm exec tsc --noEmit -p packages/server-node/tsconfig.json && pnpm exec tsc --noEmit -p packages/react-terminal/tsconfig.json && pnpm exec tsc --noEmit -p packages/host/tsconfig.json && pnpm exec tsc --noEmit -p examples/minimal-react-host/tsconfig.json && pnpm exec tsc --noEmit -p examples/standalone-cli/tsconfig.json && pnpm exec tsc --noEmit -p examples/minimal-agent-host/tsconfig.json && pnpm exec tsc --noEmit -p examples/standalone-cli-host/tsconfig.json && pnpm exec tsc --noEmit -p packages/shell-quote/tsconfig.json",
@@ -16,7 +25,7 @@
   },
   "devDependencies": {
     "typescript": "^5.7.2",
-    "vitest": "^2.1.8",
+    "vitest": "^3.2.6",
     "@types/node": "^22.10.0",
     "@continuo-terminal/protocol": "workspace:*",
     "@continuo-terminal/server-node": "workspace:*",

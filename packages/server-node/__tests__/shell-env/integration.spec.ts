@@ -126,7 +126,41 @@ describe('shell integration env helpers', () => {
     const result = await prepareShellIntegrationEnv('/some/unknown/shell', env);
 
     expect(result.env).toBe(env);
+    expect(result.args).toEqual([]);
     await expect(result.cleanup()).resolves.toBeUndefined();
+  });
+
+  // Polish: interactive bash ignores BASH_ENV, so the helper must also supply
+  // the `--rcfile` spawn args or the OSC 7 snippet is never loaded. fish (auto
+  // conf.d) and zsh (no-op) need no extra args.
+  it('T20 supplies spawn args: bash needs --rcfile, fish/zsh/unknown need none', async () => {
+    const env = baseEnv();
+
+    const bash = await prepareShellIntegrationEnv('/bin/bash', env);
+    expect(bash.args).toEqual(['--rcfile', bash.env.BASH_ENV, '-i']);
+    await bash.cleanup();
+
+    const fish = await prepareShellIntegrationEnv('/usr/local/bin/fish', env);
+    expect(fish.args).toEqual([]);
+    await fish.cleanup();
+
+    const zsh = await prepareShellIntegrationEnv('/bin/zsh', env);
+    expect(zsh.args).toEqual([]);
+
+    const unknown = await prepareShellIntegrationEnv('/some/unknown/shell', env);
+    expect(unknown.args).toEqual([]);
+  });
+
+  it('T16b Windows git-bash bash.exe → 识别为 bash 并注入集成(去 .exe)', async () => {
+    // 跨平台审计 P2:detectShell 不去 .exe 时 bash.exe 漏注入 → 无 OSC7 cwd 跟踪。
+    const env = baseEnv();
+    const result = await prepareShellIntegrationEnv(
+      'C:\\Program Files\\Git\\bin\\bash.exe',
+      env,
+    );
+    expect(result.env).not.toBe(env); // 注入了集成(不再原样返回)
+    expect(result.env.BASH_ENV).toBeTruthy();
+    await result.cleanup();
   });
 
   it('T17 writes byte-identical bash rcfile content', async () => {
@@ -162,6 +196,24 @@ describe('shell integration env helpers', () => {
       expect(actual).not.toContain('_CONTINUO_');
     } finally {
       await cleanup();
+    }
+  });
+
+  // Polish round-10: cross-package OSC 7 interop contract. Both snippets emit a
+  // real hostname host (`file://<host>$PWD`), NOT empty/localhost. react-terminal's
+  // parseOsc7Cwd defaults to strict ['', 'localhost'] matching, so a host wiring
+  // these snippets to that parser must add the machine hostname to acceptedHosts
+  // (see parseOsc7Cwd Osc7Options JSDoc + osc7-cwd.spec interop tests). This asserts
+  // the emitter side of that contract so a snippet change can't silently break it.
+  it('T19 bash/fish OSC 7 payload uses a hostname host, not empty/localhost', async () => {
+    const bash = await readBashSnippet();
+    const fish = await readFishSnippet();
+    try {
+      expect(bash.actual).toContain(String.raw`printf '\e]7;file://%s%s\a' "${'${HOSTNAME:-}'}" "$PWD"`);
+      expect(fish.actual).toContain(String.raw`printf '\e]7;file://%s%s\a' (hostname) "$PWD"`);
+    } finally {
+      await bash.cleanup();
+      await fish.cleanup();
     }
   });
 });

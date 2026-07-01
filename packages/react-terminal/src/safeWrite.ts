@@ -20,8 +20,22 @@ const BURST_CHUNKS = 4; // 前 4 chunk(≤64KB)同步直写,首屏 prompt 0 延�
 export function chunkifyData(data: string, chunkSize: number): string[] {
   if (data.length === 0) return [];
   const chunks: string[] = [];
-  for (let i = 0; i < data.length; i += chunkSize) {
-    chunks.push(data.slice(i, i + chunkSize));
+  let i = 0;
+  while (i < data.length) {
+    let end = Math.min(i + chunkSize, data.length);
+    // Don't split a UTF-16 surrogate pair (e.g. an emoji) across two chunks: if
+    // the boundary would leave a high surrogate as the chunk's last unit, back
+    // off one unit so the pair stays together. Otherwise xterm receives two
+    // lone surrogates and renders replacement chars / corrupts output. The
+    // `end - 1 > i` guard keeps progress if chunkSize is pathologically small.
+    if (end < data.length && end - 1 > i) {
+      const lastUnit = data.charCodeAt(end - 1);
+      if (lastUnit >= 0xd800 && lastUnit <= 0xdbff) {
+        end -= 1;
+      }
+    }
+    chunks.push(data.slice(i, end));
+    i = end;
   }
   return chunks;
 }

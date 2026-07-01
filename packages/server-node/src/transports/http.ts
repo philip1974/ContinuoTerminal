@@ -141,6 +141,18 @@ export async function startHttpTransport({
     httpServer,
     port: actualPort,
     address,
-    shutdown: () => closeHttpServer(httpServer),
+    shutdown: async () => {
+      // server.close() resolves only once every active connection ends, but
+      // Streamable HTTP keeps long-lived SSE streams open and request bodies
+      // can hang or half-close — so close() alone can wait indefinitely.
+      // AgentHostImpl.dispose() awaits this shutdown before disposing PTY
+      // sessions (and a hung await, unlike a rejection, skips its finally), so
+      // an unbounded close would strand live shells on teardown. Force-
+      // terminate open connections after initiating close so shutdown is
+      // bounded and never blocks session cleanup.
+      const closed = closeHttpServer(httpServer);
+      httpServer.closeAllConnections();
+      await closed;
+    },
   };
 }

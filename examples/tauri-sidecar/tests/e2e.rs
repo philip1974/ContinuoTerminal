@@ -41,7 +41,13 @@ async fn e2e_full_demo_or_skip() {
 
     client.initialize().await.expect("initialize should succeed");
     let tools = client.tools_list().await.expect("tools/list should succeed");
-    assert_eq!(tools.len(), 7);
+    // server-node advertises 8 terminal.* tools; assert the name set (not just a
+    // bare count) so a future tool rename/add can't hide behind the number.
+    assert_eq!(tools.len(), 8);
+    assert!(
+        tools.iter().any(|tool| tool["name"] == "terminal.resize"),
+        "tools/list should include terminal.resize",
+    );
 
     let session_id = client
         .create_session("/bin/bash", "echo from-rust-sidecar; sleep 1")

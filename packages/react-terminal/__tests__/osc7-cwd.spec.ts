@@ -83,6 +83,19 @@ describe('osc7-cwd · preserve legacy strict host matching', () => {
       expect(parseOsc7Cwd('file:///foo%2Fbar')).toBe('/foo%2Fbar');
     });
 
+    it('T6g Windows drive (windowsDrivePaths): file:///C:/Users/me → C:/Users/me', () => {
+      const win = { windowsDrivePaths: true };
+      expect(parseOsc7Cwd('file:///C:/Users/me', win)).toBe('C:/Users/me');
+      expect(parseOsc7Cwd('file://localhost/C:/work', win)).toBe('C:/work');
+    });
+
+    it('T6g-posix POSIX 保留 /C:/work(根下名为 C: 的目录,非 Windows 模式不 strip)', () => {
+      // codex diff 复查:无条件 strip 会破坏合法 POSIX 路径。
+      expect(parseOsc7Cwd('file:///C:/work', { windowsDrivePaths: false })).toBe(
+        '/C:/work',
+      );
+    });
+
     it('T6g preserves reserved %23 encoding with decodeURI', () => {
       expect(parseOsc7Cwd('file:///path%23frag')).toBe('/path%23frag');
     });
@@ -164,5 +177,27 @@ describe('osc7-cwd · preserve legacy strict host matching', () => {
       expect(handler('file://remote/tmp/')).toBe(true);
       expect(onCwd).not.toHaveBeenCalled();
     });
+  });
+});
+
+// Polish round-10: cross-package interop contract with
+// @continuo-terminal/server-node's prepareShellIntegrationEnv. Its bundled
+// bash/fish snippets emit `file://<real hostname>$PWD` (bash `${HOSTNAME:-}`,
+// fish `(hostname)`), NOT empty/localhost. With the parser's strict default
+// (['', 'localhost']) those payloads are silently dropped — a host MUST add the
+// machine hostname to acceptedHosts. This locks that contract so a future
+// default/snippet change can't re-break local bash/fish cwd tracking unnoticed.
+describe('osc7-cwd · interop with bundled shell integration (hostname host)', () => {
+  const HOSTNAME = 'MacBook-Pro.local'; // representative `hostname` output
+  // Exactly the shape prepareShellIntegrationEnv's snippets emit: file://<host>$PWD.
+  const payload = `file://${HOSTNAME}/Users/me/project`;
+
+  it('drops the bundled-integration payload under the strict default', () => {
+    expect(parseOsc7Cwd(payload)).toBeNull();
+  });
+
+  it('accepts it once the machine hostname is in acceptedHosts', () => {
+    const opts: Osc7Options = { acceptedHosts: ['', 'localhost', HOSTNAME] };
+    expect(parseOsc7Cwd(payload, opts)).toBe('/Users/me/project');
   });
 });

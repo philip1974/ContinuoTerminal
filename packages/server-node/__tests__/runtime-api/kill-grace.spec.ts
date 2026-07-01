@@ -48,6 +48,27 @@ describe('SessionManager.kill gracePeriodMs runtime API', () => {
     await expect(sm.list()).resolves.toEqual({ sessions: [] });
   });
 
+  // Polish round-4: kill is fire-and-forget — the session is removed as soon as
+  // the signal is sent. The tool description promises no retry, so a second kill
+  // on the same id must be a silent no-op ({}) that does NOT reach the PTY again
+  // (the handle is already gone). Guards against the description drifting back to
+  // an unmet "retry a stronger signal" promise.
+  it('is not retryable: a second kill after removal is a silent no-op', async () => {
+    const sm = new SessionManager();
+    const created = await sm.create({});
+
+    await sm.kill({ session_id: created.session_id, signal: 'SIGTERM' });
+    expect(ptyMocks.kill).toHaveBeenCalledTimes(1);
+    await expect(sm.list()).resolves.toEqual({ sessions: [] });
+
+    // Process ignored SIGTERM and is still alive; caller retries SIGKILL.
+    const retry = await sm.kill({ session_id: created.session_id, signal: 'SIGKILL' });
+
+    expect(retry).toEqual({}); // silent no-op
+    expect(ptyMocks.kill).toHaveBeenCalledTimes(1); // no second signal reached the PTY
+    expect(ptyMocks.kill).not.toHaveBeenCalledWith('SIGKILL');
+  });
+
   it('sends SIGKILL after the grace period when the PTY has not exited', async () => {
     vi.useFakeTimers();
     const sm = new SessionManager();

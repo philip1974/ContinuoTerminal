@@ -7,7 +7,7 @@ export type ShellFamily = 'posix' | 'cmd' | 'powershell';
 
 export type QuoteResult =
   | { ok: true; quoted: string }
-  | { ok: false; reason: 'control_char' | 'cmd_unrepresentable' };
+  | { ok: false; reason: 'control_char' | 'cmd_unrepresentable' | 'unsupported_shell_family' };
 
 const POSIX_BARE_SAFE = /^[A-Za-z0-9_\-./@%+=:,]+$/;
 // eslint-disable-next-line no-control-regex
@@ -36,7 +36,12 @@ export function quoteForShell(path: string, family: ShellFamily): QuoteResult {
 
   if (family === 'posix') return { ok: true, quoted: quotePosix(path) };
   if (family === 'powershell') return { ok: true, quoted: quotePowerShell(path) };
-  return quoteCmd(path);
+  if (family === 'cmd') return quoteCmd(path);
+  // Unknown family (JS callers / config- or platform-detected strings like
+  // 'pwsh', 'bash', 'powershell.exe'). This is a security-sensitive escaper, so
+  // reject explicitly rather than silently applying cmd rules — mis-escaping a
+  // PowerShell path with cmd's double-quote rules would change its meaning.
+  return { ok: false, reason: 'unsupported_shell_family' };
 }
 
 export function quotePaths(

@@ -32,8 +32,9 @@ This installs every workspace package and runs `node-pty`'s install script
 ## Verify the workspace
 
 ```sh
-pnpm typecheck   # runs tsc -p ... for protocol, server-node, react-terminal, examples/minimal-react-host, examples/standalone-cli
+pnpm typecheck   # tsc --noEmit across every package + example
 pnpm test        # runs the full vitest suite across all packages
+pnpm verify:contract   # contract-test typecheck + the cross-package contract suite
 ```
 
 A clean install on a supported platform should produce all green tests.
@@ -84,9 +85,9 @@ See `packages/react-terminal/README.md` for the full props reference.
 ## Continuous integration
 
 The `.github/workflows/ci.yml` workflow runs `pnpm install --frozen-lockfile`,
-`pnpm typecheck`, and `pnpm test` on `ubuntu-latest` and `macos-latest` with
-Node 24 and pnpm 9. It triggers on every push and on pull requests targeting
-`main`.
+`pnpm typecheck`, `pnpm test`, `pnpm verify:contract`, and a production build of
+`examples/minimal-react-host` on `ubuntu-latest` and `macos-latest` with Node 24
+and pnpm 9. It triggers on every push and on pull requests targeting `main`.
 
 ## macOS `node-pty` troubleshooting
 

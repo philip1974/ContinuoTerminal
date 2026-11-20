@@ -22,7 +22,7 @@ import {
   sendInputInputSchema,
   sendTextInputSchema,
 } from '@continuo-terminal/protocol';
-import { zodToJsonSchema } from 'zod-to-json-schema';
+import { z } from 'zod';
 
 import { makeCreateSessionHandler } from './handlers/create-session.js';
 import { makeKillHandler } from './handlers/kill.js';
@@ -34,6 +34,11 @@ import { makeSendInputHandler } from './handlers/send-input.js';
 import { makeSendTextHandler } from './handlers/send-text.js';
 import { SessionManager } from './session-manager.js';
 import type { AuthContext, AuthorizationDecision, AuthorizeToolCall } from './auth-hooks.js';
+
+// MCP tools/list 的 inputSchema:zod 4 原生导出,沿用 draft-07(与此前 zod-to-json-schema 输出一致)。
+function toInputJsonSchema(schema: z.ZodType) {
+  return z.toJSONSchema(schema, { target: 'draft-7' });
+}
 
 // Tool descriptions are surfaced verbatim in tools/list and form the
 // contract LLM/MCP hosts see. They MUST match the actual schema and
@@ -90,42 +95,42 @@ export function createTerminalMcpServer(opts: CreateTerminalMcpServerOptions = {
       {
         name: MCP_TOOL_CREATE_SESSION,
         description: TOOL_DESCRIPTIONS[MCP_TOOL_CREATE_SESSION],
-        inputSchema: zodToJsonSchema(createSessionInputSchema),
+        inputSchema: toInputJsonSchema(createSessionInputSchema),
       },
       {
         name: MCP_TOOL_LIST_SESSIONS,
         description: TOOL_DESCRIPTIONS[MCP_TOOL_LIST_SESSIONS],
-        inputSchema: zodToJsonSchema(listSessionsInputSchema),
+        inputSchema: toInputJsonSchema(listSessionsInputSchema),
       },
       {
         name: MCP_TOOL_SEND_INPUT,
         description: TOOL_DESCRIPTIONS[MCP_TOOL_SEND_INPUT],
-        inputSchema: zodToJsonSchema(sendInputInputSchema),
+        inputSchema: toInputJsonSchema(sendInputInputSchema),
       },
       {
         name: MCP_TOOL_SEND_TEXT,
         description: TOOL_DESCRIPTIONS[MCP_TOOL_SEND_TEXT],
-        inputSchema: zodToJsonSchema(sendTextInputSchema),
+        inputSchema: toInputJsonSchema(sendTextInputSchema),
       },
       {
         name: MCP_TOOL_PRESS_KEY,
         description: TOOL_DESCRIPTIONS[MCP_TOOL_PRESS_KEY],
-        inputSchema: zodToJsonSchema(pressKeyInputSchema),
+        inputSchema: toInputJsonSchema(pressKeyInputSchema),
       },
       {
         name: MCP_TOOL_READ_OUTPUT,
         description: TOOL_DESCRIPTIONS[MCP_TOOL_READ_OUTPUT],
-        inputSchema: zodToJsonSchema(readOutputInputSchema),
+        inputSchema: toInputJsonSchema(readOutputInputSchema),
       },
       {
         name: MCP_TOOL_KILL,
         description: TOOL_DESCRIPTIONS[MCP_TOOL_KILL],
-        inputSchema: zodToJsonSchema(killInputSchema),
+        inputSchema: toInputJsonSchema(killInputSchema),
       },
       {
         name: MCP_TOOL_RESIZE,
         description: TOOL_DESCRIPTIONS[MCP_TOOL_RESIZE],
-        inputSchema: zodToJsonSchema(resizeInputSchema),
+        inputSchema: toInputJsonSchema(resizeInputSchema),
       },
     ],
   }));

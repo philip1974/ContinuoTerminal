@@ -16,9 +16,9 @@
   "dependencies": {
     "@continuo-terminal/protocol": "workspace:*",
     "@continuo-terminal/server-node": "workspace:*",
-    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "commander": "^14.0.0",
-    "zod": "^3.25.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "tsx": "^4.22.3"

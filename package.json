@@ -30,7 +30,7 @@
   },
   "devDependencies": {
     "typescript": "^5.7.2",
-    "vitest": "^3.2.6",
+    "vitest": "^4.1.11",
     "@types/node": "^22.10.0",
     "@continuo-terminal/protocol": "workspace:*",
     "@continuo-terminal/server-node": "workspace:*",

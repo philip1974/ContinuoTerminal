@@ -1,0 +1,270 @@
+{
+  "$schema_version": 1,
+  "$design_notes": [
+    "Source of truth: rg -n -e '(panelId|windowId|\\bpanel\\b|\\bTauri\\b|\\bElectron\\b|Continuo)' packages/*/src/",
+    "Generated 2026-05-24 from clean post-P1 ContinuoTerminal repo state.",
+    "Line numbers are reference only. The 'excerpt' field is the stable matcher — if source moves but excerpt unchanged, leak-check still recognizes the hit.",
+    "If new compat reference legitimately needs to be added to packages/*/src/, append entry here in the same commit."
+  ],
+  "entries": [
+    {
+      "file": "packages/protocol/src/index.ts",
+      "line": 4,
+      "pattern": "Continuo",
+      "excerpt": "// mirrored from Continuo). Keep this barrel minimal: it should not introduce",
+      "rationale": "Barrel JSDoc — Continuo provenance reference (ADR 0006 §3 mirror invariant)"
+    },
+    {
+      "file": "packages/react-terminal/src/http-adapter.ts",
+      "line": 7,
+      "pattern": "Electron",
+      "excerpt": " * Use this when embedding the `<Terminal>` component in a non-Electron host",
+      "rationale": "createHttpMCPClientAdapter JSDoc host enumeration"
+    },
+    {
+      "file": "packages/react-terminal/src/http-adapter.ts",
+      "line": 8,
+      "pattern": "Tauri",
+      "excerpt": " * (browser app / VS Code webview / Tauri renderer / standalone web demo etc.)",
+      "rationale": "createHttpMCPClientAdapter JSDoc host enumeration"
+    },
+    {
+      "file": "packages/server-node/src/auth-hooks.ts",
+      "line": 3,
+      "pattern": "Electron/window/panel",
+      "excerpt": " * MCP tool-call authorization. Carries no Electron/window/panel specifics -",
+      "rationale": "AuthorizationDecision JSDoc invariant comment"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 2,
+      "pattern": "Continuo",
+      "excerpt": "// Continuo consumes this package via file: link; `electron/shared/mcp-terminal-schemas.ts` is a single-line re-export mirror that auto-tracks this file.",
+      "rationale": "Source-of-truth header; Continuo host consumes protocol package"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 3,
+      "pattern": "Continuo",
+      "excerpt": "// Update this file when adding / extending MCP tool schemas; Continuo will pick up the change on next `pnpm install --offline`.",
+      "rationale": "Source-of-truth header; Continuo host consumes protocol package"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 58,
+      "pattern": "panel",
+      "excerpt": " * kind='active'(默认)— main 通过 IPC query renderer 当前 active terminal panel。",
+      "rationale": "attachTargetSchema JSDoc kind='active' description"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 59,
+      "pattern": "panelId",
+      "excerpt": " * kind='panel' — 显式指定 panelId。",
+      "rationale": "attachTargetSchema JSDoc kind='panel' description"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 60,
+      "pattern": "windowId",
+      "excerpt": " * kind='window' — 指定 windowId,落到该窗口 first visible terminal panel。",
+      "rationale": "attachTargetSchema JSDoc kind='window' description"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 68,
+      "pattern": "Continuo/Electron/Tauri",
+      "excerpt": " * a Continuo-style multi-panel renderer (e.g. an Electron / Tauri sidecar",
+      "rationale": "JSDoc forward-compat host enumeration"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 69,
+      "pattern": "window/panel",
+      "excerpt": " * that translates `target.kind` into a window/panel selection before",
+      "rationale": "JSDoc kind discriminator doc"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 74,
+      "pattern": "Continuo/panel/window",
+      "excerpt": "// Legacy host attachment compatibility (Continuo panel/window concept).",
+      "rationale": "attachTargetSchema definition comment"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 77,
+      "pattern": "panel/panelId",
+      "excerpt": "  z.object({ kind: z.literal('panel'), panelId: z.string().min(1) }).strict(),",
+      "rationale": "attachTargetSchema panel discriminator (schema literal — ADR 0006 §3 deliberate compat)"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 78,
+      "pattern": "window/windowId",
+      "excerpt": "  z.object({ kind: z.literal('window'), windowId: z.number().int() }).strict(),",
+      "rationale": "attachTargetSchema window discriminator"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 99,
+      "pattern": "Continuo",
+      "excerpt": "     * Hosts proxying MCP calls into a Continuo-style multi-panel renderer",
+      "rationale": "createSessionInputSchema target field JSDoc"
+    },
+    {
+      "file": "packages/server-node/src/bin.mjs",
+      "line": 9,
+      "pattern": "Continuo",
+      "excerpt": "Run the Continuo Terminal MCP server.",
+      "rationale": "CLI --help text product attribution"
+    },
+    {
+      "file": "packages/server-node/src/session-manager.ts",
+      "line": 277,
+      "pattern": "Electron",
+      "excerpt": "   * Pull-based raw buffer snapshot for non-MCP consumers (e.g. Electron",
+      "rationale": "getBufferSnapshot JSDoc consumer attribution"
+    },
+    {
+      "file": "packages/server-node/src/session-manager.ts",
+      "line": 283,
+      "pattern": "Continuo",
+      "excerpt": "   * sendInput / sendText / pressKey / resize / readOutput. Continuo",
+      "rationale": "JSDoc consumer attribution"
+    },
+    {
+      "file": "packages/server-node/src/session-manager.ts",
+      "line": 288,
+      "pattern": "Continuo",
+      "excerpt": "   * payloads in Continuo do not forward this field.",
+      "rationale": "JSDoc consumer note"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 16,
+      "pattern": "Continuo",
+      "excerpt": " * Production xterm renderer for ContinuoTerminal sidecar sessions.",
+      "rationale": "Topic 53 component JSDoc — references product name in consumer documentation"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 30,
+      "pattern": "panel",
+      "excerpt": " * - **hidden prop** — when host's panel is not visible (tab inactive), the",
+      "rationale": "Topic 53 component JSDoc — host's panel/tab concept (generic UI term, not Continuo-specific)"
+    },
+    {
+      "file": "packages/react-terminal/src/key-mapping.ts",
+      "line": 23,
+      "pattern": "Continuo",
+      "excerpt": " * — Continuo uses this to delegate to document-level command system (terminal",
+      "rationale": "Topic 53 key-mapping JSDoc — references Continuo as example consumer"
+    },
+    {
+      "file": "packages/react-terminal/src/types.ts",
+      "line": 28,
+      "pattern": "panel",
+      "excerpt": "   * fit-on-mount until next visible transition. Use when host panel/tab",
+      "rationale": "Topic 53 TerminalProps JSDoc — generic host panel/tab terminology"
+    },
+    {
+      "file": "packages/react-terminal/src/key-mapping.ts",
+      "line": 2,
+      "pattern": "Continuo",
+      "excerpt": "// Origin: Continuo `src/panels/Terminal/key-mapping.ts` (F1 paste-stuck fix",
+      "rationale": "Topic 53 key-mapping module provenance comment"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 133,
+      "pattern": "panel",
+      "excerpt": "  // Re-fit on hidden → visible transition (host panel toggled back).",
+      "rationale": "Topic 53 component inline comment — generic host panel terminology"
+    },
+    {
+      "file": "packages/react-terminal/src/osc7-cwd.ts",
+      "line": 2,
+      "pattern": "Continuo",
+      "excerpt": " * OSC 7 cwd parser/binder migrated from Continuo `useTerminal.ts:309-322`.",
+      "rationale": "OSC7 cwd parser provenance comment"
+    },
+    {
+      "file": "packages/react-terminal/src/safeWrite.ts",
+      "line": 1,
+      "pattern": "Continuo",
+      "excerpt": "// xterm 写队列。Origin: Continuo `src/panels/Terminal/safeWrite.ts`",
+      "rationale": "safeWrite module provenance comment"
+    },
+    {
+      "file": "packages/server-node/src/shell-env/host-shell-policy.ts",
+      "line": 3,
+      "pattern": "Continuo",
+      "excerpt": " * host wrapper (e.g. Continuo IPC) calls explicitly to vet user-supplied shells.",
+      "rationale": "host shell policy consumer attribution"
+    },
+    {
+      "file": "packages/server-node/src/shell-env/host-shell-policy.ts",
+      "line": 4,
+      "pattern": "Continuo",
+      "excerpt": " * Moved from Continuo electron/shared/terminal-shells.ts in 2026-05-25 migration.",
+      "rationale": "host shell policy provenance comment"
+    },
+    {
+      "file": "packages/server-node/src/shell-env/integration.ts",
+      "line": 60,
+      "pattern": "panel",
+      "excerpt": "  // 代价:跨进程 OSC 7 自动 cwd 跟踪暂停 (panel 内 split 时新 leaf 不再继承",
+      "rationale": "shell-env integration panel cwd limitation comment"
+    },
+    {
+      "file": "packages/server-node/src/shell-env/integration.ts",
+      "line": 61,
+      "pattern": "panel",
+      "excerpt": "  // `cd /tmp` 后的 cwd,只继承 panel 启动 cwd)。topic 03 plan-v4 P0-1 cwd",
+      "rationale": "shell-env integration panel cwd limitation comment"
+    },
+    {
+      "file": "packages/shell-quote/src/index.ts",
+      "line": 2,
+      "pattern": "Continuo",
+      "excerpt": "// Origin: Continuo `src/lib/shell-quote.ts` (ported into @continuo-terminal/shell-quote",
+      "rationale": "shell-quote module provenance comment"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 110,
+      "pattern": "Continuo",
+      "excerpt": "     * Request that a Continuo-managed Stop hook be installed into the spawned",
+      "rationale": "install_stop_hook reserved-field JSDoc — Continuo host consumer attribution (polish #2)"
+    },
+    {
+      "file": "packages/protocol/src/schemas.ts",
+      "line": 115,
+      "pattern": "Continuo",
+      "excerpt": "     * passing `true` is silently ignored here. Continuo-style hosts that",
+      "rationale": "install_stop_hook reserved-field JSDoc — Continuo host consumer attribution (polish #2)"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 97,
+      "pattern": "Continuo",
+      "excerpt": "    // cell grid and avoids the letter-spacing path. Mirrors Continuo main",
+      "rationale": "WebGL renderer JSDoc — mirrors Continuo main repo useTerminal.ts pattern"
+    },
+    {
+      "file": "packages/react-terminal/src/Terminal.tsx",
+      "line": 185,
+      "pattern": "panel",
+      "excerpt": "  // Re-fit on hidden → visible transition (host panel toggled back). Must run",
+      "rationale": "hidden→visible re-fit inline comment — generic host panel/tab term (polish #3)"
+    },
+    {
+      "file": "packages/react-terminal/src/osc7-cwd.ts",
+      "line": 20,
+      "pattern": "Continuo",
+      "excerpt": "   * `['', 'localhost']` (strict local-only matching — legacy Continuo contract).",
+      "rationale": "Osc7Options.acceptedHosts JSDoc — legacy Continuo strict-host contract reference (polish #10)"
+    }
+  ]
+}

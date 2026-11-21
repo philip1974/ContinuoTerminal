@@ -1,0 +1,321 @@
+// Terminal MCP — tool schemas (source of truth for both repos).
+// Continuo consumes this package via file: link; `electron/shared/mcp-terminal-schemas.ts` is a single-line re-export mirror that auto-tracks this file.
+// Update this file when adding / extending MCP tool schemas; Continuo will pick up the change on next `pnpm install --offline`.
+
+import { z } from 'zod';
+
+// ── tool 名常量 ────────────────────────────────────────────────
+
+export const MCP_TOOL_LIST_SESSIONS = 'terminal.list_sessions';
+export const MCP_TOOL_CREATE_SESSION = 'terminal.create_session';
+export const MCP_TOOL_SEND_INPUT = 'terminal.send_input';
+export const MCP_TOOL_SEND_TEXT = 'terminal.send_text';
+export const MCP_TOOL_PRESS_KEY = 'terminal.press_key';
+export const MCP_TOOL_READ_OUTPUT = 'terminal.read_output';
+export const MCP_TOOL_KILL = 'terminal.kill';
+export const MCP_TOOL_RESIZE = 'terminal.resize';
+export const MCP_TOOL_AWAIT_STOP_HOOK = 'terminal.await_stop_hook';
+
+// ── list_sessions ──────────────────────────────────────────────
+
+/** 空对象,严格(任何额外字段拒). */
+export const listSessionsInputSchema = z.object({}).strict();
+
+/**
+ * 单个 session 的对外形态(snake_case)。
+ * `agent_label` 仅 origin === 'agent' 时可能存在,user session 不带此字段。
+ * `exit_code` 必须显式 null 或 number(undefined 不行)。
+ */
+const sessionItemSchema = z
+  .object({
+    session_id: z.string().min(1),
+    title: z.string(),
+    cwd: z.string(),
+    origin: z.enum(['user', 'agent']),
+    agent_label: z.string().optional(),
+    created_at: z.number(),
+    exit_code: z.number().nullable(),
+  })
+  .strict();
+
+export const listSessionsOutputSchema = z
+  .object({
+    sessions: z.array(sessionItemSchema),
+  })
+  .strict();
+
+export type ListSessionsInput = z.infer<typeof listSessionsInputSchema>;
+export type ListSessionsOutput = z.infer<typeof listSessionsOutputSchema>;
+export type ListSessionItem = z.infer<typeof sessionItemSchema>;
+
+// ── create_session(P2,不含 autorun)──────────────────────────
+
+/**
+ * topic-05 加可选 target hint:agent 指定新 session attach 到哪个 InternalTerminalPanel。
+ * kind='active'(默认)— main 通过 IPC query renderer 当前 active terminal panel。
+ * kind='panel' — 显式指定 panelId。
+ * kind='window' — 指定 windowId,落到该窗口 first visible terminal panel。
+ *
+ * 现有调用方不传 target 时,行为等价于 { kind: 'active' }(向后兼容)。
+ *
+ * **Status in v0.1.x — reserved / not consumed.** The standalone
+ * `@continuo-terminal/server-node` does not yet read `input.target` — it
+ * ignores the hint and always allocates a fresh PTY. The field is kept on
+ * the schema for forward compatibility with hosts that proxy MCP calls into
+ * a Continuo-style multi-panel renderer (e.g. an Electron / Tauri sidecar
+ * that translates `target.kind` into a window/panel selection before
+ * spawning the session). A future minor bump may wire it through; existing
+ * callers can keep passing `target` without changing the over-the-wire
+ * shape.
+ */
+// Legacy host attachment compatibility (Continuo panel/window concept).
+export const attachTargetSchema = z.discriminatedUnion('kind', [
+  z.object({ kind: z.literal('active') }).strict(),
+  z.object({ kind: z.literal('panel'), panelId: z.string().min(1) }).strict(),
+  z.object({ kind: z.literal('window'), windowId: z.number().int() }).strict(),
+]);
+
+export type AttachTarget = z.infer<typeof attachTargetSchema>;
+
+export const createSessionInputSchema = z
+  .object({
+    cwd: z.string().optional(),
+    name: z.string().optional(),
+    agentLabel: z.string().optional(),
+    /** Override the spawned shell binary. Defaults to the platform default shell
+     * (Windows: powershell.exe; Mac/Linux: validated $SHELL, else /bin/sh). */
+    shell: z.string().optional(),
+    /**
+     * Per-session CLI args appended to `shell` spawn (e.g. `['-l', '-i']` for
+     * interactive login shell, or specific CLI flags when `shell` is a CLI
+     * binary like `claude` or `codex`). server-node SessionManager forwards
+     * directly to node-pty's spawn args. Default: empty args when omitted.
+     */
+    args: z.array(z.string()).optional(),
+    /** PTY column count (default 80). */
+    cols: z.number().int().positive().optional(),
+    /** PTY row count (default 24). */
+    rows: z.number().int().positive().optional(),
+    /**
+     * Per-session environment variable overrides merged into the spawn env on
+     * top of host process env + `TERM`/`COLORTERM` defaults. Use for
+     * agent-specific tokens (e.g. `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) or
+     * locale/PATH adjustments. server-node merges via `{ ...process.env,
+     * ...input.env }` so caller keys take precedence over parent process env.
+     */
+    env: z.record(z.string(), z.string()).optional(),
+    /** spawn 后 delay 200ms(Windows 600)键入此命令 + \n. */
+    autorun: z.string().optional(),
+    /**
+     * Request that a Continuo-managed Stop hook be installed into the spawned
+     * CLI's settings before it starts (pairs with `terminal.await_stop_hook`).
+     * **Not consumed by server-node 0.1.x** — the schema is reserved for the
+     * stop-hook roadmap (see `awaitStopHookInputSchema` below); server-node
+     * neither installs the hook nor advertises `terminal.await_stop_hook`, so
+     * passing `true` is silently ignored here. Continuo-style hosts that
+     * implement the hook lifecycle are the intended consumers.
+     */
+    install_stop_hook: z.boolean().optional(),
+    /**
+     * When awaiting a stop hook, include the full raw hook payload in the
+     * result. **Not consumed by server-node 0.1.x** — reserved alongside
+     * `install_stop_hook` for the stop-hook roadmap.
+     */
+    include_raw: z.boolean().optional(),
+    /**
+     * Optional attach hint. **Not consumed by server-node 0.1.x** — see
+     * `attachTargetSchema` JSDoc above for the forward-compatibility note.
+     * Hosts proxying MCP calls into a Continuo-style multi-panel renderer
+     * are the intended consumers.
+     */
+    target: attachTargetSchema.optional(),
+  })
+  .strict();
+
+export const createSessionOutputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    /** PTY child pid (when available; node-pty exposes pid on most platforms). */
+    pid: z.number().int().optional(),
+    /**
+     * Echoes whether a Stop hook was installed for the session. **Not emitted
+     * by server-node 0.1.x** — reserved for the stop-hook roadmap (pairs with
+     * the `install_stop_hook` input); server-node never sets this field.
+     */
+    stop_hook_installed: z.boolean().optional(),
+  })
+  .strict();
+
+export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
+export type CreateSessionOutput = z.infer<typeof createSessionOutputSchema>;
+
+export const awaitStopHookInputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    timeout_sec: z.number().int().positive().max(600).optional().default(60),
+    include_raw: z.boolean().optional().default(false),
+  })
+  .strict();
+
+export const awaitStopHookOutputSchema = z
+  .object({
+    status: z.enum(['stop', 'timeout']),
+    session_id: z.string(),
+    cli_session_id: z.string().nullable(),
+    turn_id: z.string().nullable(),
+    cwd: z.string().nullable(),
+    transcript_path: z.string().nullable(),
+    last_assistant_message: z.string().nullable(),
+    elapsed_ms: z.number(),
+    raw: z.record(z.string(), z.unknown()).nullable().optional(),
+  })
+  .strict();
+
+export type AwaitStopHookInput = z.infer<typeof awaitStopHookInputSchema>;
+export type AwaitStopHookOutput = z.infer<typeof awaitStopHookOutputSchema>;
+
+// ── send_input(P3)─────────────────────────────────────────────
+
+const SEND_INPUT_MAX_CHARS = 2_000_000;
+
+export const sendInputInputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    data: z.string().max(SEND_INPUT_MAX_CHARS),
+  })
+  .strict();
+
+export const sendInputOutputSchema = z.object({}).strict();
+
+export type SendInputInput = z.infer<typeof sendInputInputSchema>;
+export type SendInputOutput = z.infer<typeof sendInputOutputSchema>;
+
+// ── send_text(P4+,c 方案高层 API:纯文本,不附加按键)──────────
+
+export const sendTextInputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    text: z.string().max(SEND_INPUT_MAX_CHARS),
+  })
+  .strict();
+
+export const sendTextOutputSchema = z.object({}).strict();
+
+export type SendTextInput = z.infer<typeof sendTextInputSchema>;
+export type SendTextOutput = z.infer<typeof sendTextOutputSchema>;
+
+// ── press_key(P4+,c 方案高层 API:按键 enum → 字节映射)────────
+
+/** 按键名 → PTY 字节序列。server 内部映射,LLM 只见 key 名. */
+export const KEY_BYTES = {
+  enter: '\r', // CR(0x0d),raw mode TUI 期望此字符
+  tab: '\t',
+  escape: '\x1b',
+  backspace: '\x7f', // DEL,大多 TUI(readline / fish)期望此;BS 0x08 仅老系统
+  ctrl_c: '\x03',
+  ctrl_d: '\x04',
+  ctrl_z: '\x1a',
+  up: '\x1b[A',
+  down: '\x1b[B',
+  right: '\x1b[C',
+  left: '\x1b[D',
+} as const;
+
+export type PressKeyName = keyof typeof KEY_BYTES;
+
+const PRESS_KEY_NAMES = Object.keys(KEY_BYTES) as [PressKeyName, ...PressKeyName[]];
+
+export const pressKeyInputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    key: z.enum(PRESS_KEY_NAMES),
+  })
+  .strict();
+
+export const pressKeyOutputSchema = z.object({}).strict();
+
+export type PressKeyInput = z.infer<typeof pressKeyInputSchema>;
+export type PressKeyOutput = z.infer<typeof pressKeyOutputSchema>;
+
+// ── read_output(P3)────────────────────────────────────────────
+
+const READ_OUTPUT_MAX_LINES = 2000;
+
+export const readOutputInputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    since_seq: z.number().int().nonnegative().optional(),
+    max_lines: z.number().int().min(1).max(READ_OUTPUT_MAX_LINES).optional(),
+    /**
+     * Strip ANSI/control sequences from `lines` only. The `data` field is
+     * always the raw byte stream regardless of this flag — pass strip_ansi
+     * to get human-readable `lines`, read `data` for lossless TUI replay.
+     */
+    strip_ansi: z.boolean().optional(),
+  })
+  .strict();
+
+export const readOutputOutputSchema = z
+  .object({
+    lines: z.array(z.string()),
+    /**
+     * Raw concatenated output since `since_seq` with original byte stream
+     * preserved (NO splitting / line normalization / trailing-newline insertion)
+     * and NOT affected by `strip_ansi` — `data` is always the raw bytes; only
+     * `lines` is cleaned when `strip_ansi` is set. TUI consumers (xterm
+     * renderers running ink-based CLIs like Claude Code, Codex, htop) MUST use
+     * `data` instead of `lines` — `\r`-only cursor updates (spinner frames,
+     * in-place redraws) are corrupted when output is split-then-rejoined with
+     * newline or stripped of control sequences. `lines` is preserved for
+     * non-TUI consumers + backwards compat.
+     */
+    data: z.string(),
+    next_seq: z.number().int().nonnegative(),
+    /**
+     * True when the byte-capped session buffer evicted output before this
+     * `since_seq` — i.e. real data loss the caller can never retrieve. It is
+     * NOT set by the caller's own `max_lines` clipping (that drops nothing —
+     * `data` stays complete and `next_seq` advances); only genuine buffer
+     * eviction sets it, so clients can treat `true` as "history was lost".
+     */
+    truncated: z.boolean(),
+  })
+  .strict();
+
+export type ReadOutputInput = z.infer<typeof readOutputInputSchema>;
+export type ReadOutputOutput = z.infer<typeof readOutputOutputSchema>;
+
+// ── kill(P4)───────────────────────────────────────────────────
+
+export const killInputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    signal: z.enum(['SIGINT', 'SIGTERM', 'SIGKILL']).optional(),
+  })
+  .strict();
+
+export const killOutputSchema = z.object({}).strict();
+
+export type KillInput = z.infer<typeof killInputSchema>;
+export type KillOutput = z.infer<typeof killOutputSchema>;
+
+// ── resize(P1 visual distortion follow-up)─────────────────────
+// Resize a session's PTY columns + rows. Backs SessionManager.resize() which
+// has existed since P1 ship — only the MCP wire was missing. Downstream
+// xterm-based renderers call this on viewport resize / fit-addon event to
+// keep PTY size in sync with rendered cols/rows. Without it, TUI apps
+// (claude / codex / htop / vim) cannot reflow to actual viewport size and
+// content displays misaligned in oversized renderers.
+
+export const resizeInputSchema = z
+  .object({
+    session_id: z.string().min(1),
+    cols: z.number().int().positive(),
+    rows: z.number().int().positive(),
+  })
+  .strict();
+
+export const resizeOutputSchema = z.object({}).strict();
+
+export type ResizeInput = z.infer<typeof resizeInputSchema>;
+export type ResizeOutput = z.infer<typeof resizeOutputSchema>;

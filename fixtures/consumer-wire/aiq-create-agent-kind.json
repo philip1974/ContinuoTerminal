@@ -1,0 +1,19 @@
+{
+  "$comment": "ContinuoTerminal-side fixture documents known good + known bad consumer wire values for downstream agent-kind enums. P2 N4 acceptance: protocol-side spec consumes this fixture and asserts known-bad values are rejected by kebab-case wire schema. NOTE: This does NOT validate Rust serde — real AiQ Rust serde regression is a separate AiQ-side follow-up topic (out of P2 strategy α scope). This fixture is the documentation+contract layer; downstream serde behavior is downstream's test responsibility.",
+  "$origin": {
+    "phase": "P1 (ADR 0007) manual UX-discovered serde rename bug",
+    "commit_reference": "53b61ac (Phase 1 close); hotfix-1 added #[serde(rename = 'continuo-terminal')] to AiQ src-tauri/src/agent.rs CreateAgentKind::ContinuoTerminal variant",
+    "consumer": "AiQ src-tauri/src/agent.rs CreateAgentKind enum"
+  },
+  "good_values": ["claude", "codex", "continuo-terminal"],
+  "bad_values_known": [
+    {
+      "value": "continuoterminal",
+      "from": "Pre-hotfix-1 Rust serde rename_all=lowercase default output (no kebab-case rename attribute on variant)",
+      "must_reject": true,
+      "rationale": "Frontend posted kebab-case 'continuo-terminal'; pre-hotfix Rust serialized 'continuoterminal' (no dash). Schema MUST reject this exact value to demonstrate contract guards the P1 incident shape. Note: this is CT-side documentation; AiQ Rust regression test is separate follow-up."
+    }
+  ],
+  "naming_pattern": "kebab-case-lowercase",
+  "regex_pin": "^[a-z]+(-[a-z]+)*$"
+}

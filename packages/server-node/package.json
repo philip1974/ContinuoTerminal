@@ -1,0 +1,62 @@
+{
+  "name": "@continuo-terminal/server-node",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Standalone Node.js MCP server exposing terminal/PTY tools. Source-only TypeScript package; runs through tsx and does not build to dist.",
+  "keywords": [
+    "mcp",
+    "terminal",
+    "pty",
+    "node-pty",
+    "stdio",
+    "http",
+    "agent",
+    "typescript"
+  ],
+  "author": "philip1974",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philip1974/ContinuoTerminal.git",
+    "directory": "packages/server-node"
+  },
+  "homepage": "https://github.com/philip1974/ContinuoTerminal/tree/main/packages/server-node",
+  "bugs": {
+    "url": "https://github.com/philip1974/ContinuoTerminal/issues"
+  },
+  "type": "module",
+  "main": "src/index.ts",
+  "bin": {
+    "continuo-terminal-server": "src/bin.mjs",
+    "ct-server": "src/bin.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "start": "tsx src/server.ts",
+    "test": "vitest run __tests__/"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "dependencies": {
+    "@continuo-terminal/protocol": "file:../protocol",
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "node-pty": "^1.1.0",
+    "tsx": "^4.22.3",
+    "zod": "^4.6.7"
+  }
+}

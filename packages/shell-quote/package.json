@@ -1,0 +1,17 @@
+{
+  "name": "@continuo-terminal/shell-quote",
+  "private": true,
+  "version": "0.1.0",
+  "description": "POSIX/cmd/PowerShell 安全引号 + 控制字符拒绝,host-agnostic 纯函数。Origin: Continuo src/lib/shell-quote.ts.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "files": [
+    "src",
+    "README.md"
+  ]
+}

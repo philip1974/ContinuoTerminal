@@ -1,0 +1,82 @@
+# continuo-terminal
+
+The terminal MCP engine extracted from
+[philip1974/Continuo](https://github.com/philip1974/Continuo), packaged as a
+pnpm monorepo of host-agnostic libraries plus an example CLI.
+
+The repo ships five active workspace packages on top of a Zod-defined protocol layer:
+a Node stdio MCP server with real PTY sessions, a React component for
+terminal UIs, a CLI demo that drives the server end-to-end, a Vite + React 19
+example host wiring the component against a mock adapter, and a base CI
+workflow. See [`docs/architecture.md`](./docs/architecture.md) for the
+layer diagram and dependency graph.
+
+## Packages
+
+| Path | Name | Purpose | Status |
+|---|---|---|---|
+| `packages/protocol` | `@continuo-terminal/protocol` | Zod schemas + 9 `terminal.*` MCP tool name constants (8 implemented + reserved `await_stop_hook`) + `KEY_BYTES` | done |
+| `packages/server-node` | `@continuo-terminal/server-node` | Standalone Node stdio MCP server (StdioServerTransport + 8 tool handlers + node-pty PTY runtime) | done |
+| `packages/react-terminal` | `@continuo-terminal/react-terminal` | React 19 + xterm 6 component, transport injected via `MCPClientAdapter` | done |
+| `packages/host` | `@continuo-terminal/host` | Host abstraction: `bootstrapAgentHost` + `TokenStore` bearer auth + agent env composition + transport wiring | done |
+| `packages/shell-quote` | `@continuo-terminal/shell-quote` | Host-agnostic POSIX/cmd/PowerShell safe quoting (pure functions) | done |
+| `examples/standalone-cli` | `@continuo-terminal/example-standalone-cli` | Node CLI demoing server-node over stdio | done |
+| `examples/minimal-react-host` | `@continuo-terminal/example-minimal-react-host` | Vite + React 19 host wiring `@continuo-terminal/react-terminal` against a mock MCP adapter | done |
+| `examples/minimal-agent-host` | `@continuo-terminal/example-minimal-agent-host` | stdio launcher: a primary controller owns the MCP stdio connection and drives a secondary terminal session | done |
+| `examples/standalone-cli-host` | `@continuo-terminal/example-standalone-cli-host` | Non-desktop `@continuo-terminal/host` consumer: local HTTP host + scoped bearer token + Streamable HTTP agent | done |
+| `examples/tauri-sidecar` | — (Rust) | Tauri 2 sidecar demo spawning server-node from a Rust host (source demo, not a packaging recipe) | done |
+| `crates/server-rust` | — | Rust MCP server | placeholder |
+
+## Quick start
+
+Requires Node 24 and pnpm 9 (see
+[`docs/getting-started.md`](./docs/getting-started.md) for setup and macOS
+`node-pty` notes).
+
+```sh
+pnpm install
+pnpm typecheck
+pnpm test
+pnpm exec tsx examples/standalone-cli/src/cli.ts demo
+```
+
+The `demo` subcommand spawns a `server-node` child, opens a PTY session,
+sends `echo hello`, reads the captured output, and kills the session. A
+successful run prints `session_id=…`, `captured: echo hello`, and
+`demo: SUCCESS`.
+
+## CI
+
+[`.github/workflows/ci.yml`](./.github/workflows/ci.yml) runs `pnpm install
+--frozen-lockfile`, `pnpm typecheck`, `pnpm test`, `pnpm verify:contract`
+(contract typecheck + tests) and the `minimal-react-host` Vite build on
+`ubuntu-latest` and `macos-latest` with Node 24 and pnpm 9. It fires on every push and on pull
+requests into `main`.
+
+## Documentation
+
+- [`docs/architecture.md`](./docs/architecture.md) — layer diagram, package
+  dependency graph, runtime flow.
+- [`docs/getting-started.md`](./docs/getting-started.md) — prerequisites,
+  install, demo, troubleshooting.
+- Per-package READMEs under `packages/*/README.md` and
+  `examples/*/README.md`.
+
+## Relation to Continuo
+
+This project is the planned extraction of the terminal-MCP engine from
+[philip1974/Continuo](https://github.com/philip1974/Continuo). It will be
+released as a separate package once the API surface is frozen.
+
+## Contributing
+
+Issues and pull requests are welcome. See
+[`CONTRIBUTING.md`](./CONTRIBUTING.md) for the local dev setup, commit
+conventions, and review path, and
+[`CODE_OF_CONDUCT.md`](./CODE_OF_CONDUCT.md) for the Contributor
+Covenant we follow. Bug reports and feature requests use the templates
+under [`.github/ISSUE_TEMPLATE/`](./.github/ISSUE_TEMPLATE).
+
+## License
+
+MIT — see [`LICENSE`](./LICENSE).

@@ -1,0 +1,15 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # 只接收安全更新(不开常规版本 PR);测试工具链的大版本升级需人工适配,不自动开 PR。
+    open-pull-requests-limit: 0
+    ignore:
+      - dependency-name: vitest
+        update-types: ["version-update:semver-major"]

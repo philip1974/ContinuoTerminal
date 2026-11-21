@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: CI (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          # Pinned to match the root package.json `packageManager` (must be an
+          # exact semver — Corepack rejects a bare `pnpm@9`, which broke
+          # `pnpm -v` / `pnpm install` before install even ran).
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Diagnostics
+        run: |
+          node -v
+          pnpm -v
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Verify contract
+        # The cross-package contract tests + their typecheck (vitest.contract
+        # config / contract-tests/*) are a deliberate guard layer but were not
+        # run in CI — contract regressions could land green. verify:contract
+        # runs typecheck:contract + test:contract; they spawn no PTY, so they
+        # are CI-safe.
+        run: pnpm verify:contract
+
+      - name: Build minimal-react-host
+        # Vite bundling catches CSS / package.exports / dependency-resolution
+        # failures that typecheck + vitest do not. Round-4 audit P1: this is
+        # the host's primary real-verification and was previously only run
+        # locally — meaning CI could go green while production builds broke.
+        run: pnpm --filter @continuo-terminal/example-minimal-react-host build
